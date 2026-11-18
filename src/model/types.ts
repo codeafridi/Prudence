@@ -54,6 +54,7 @@ export type Decision = {
 }
 
 export type Provider = {
+  id: string
   label: string
   baseUrl: string // e.g. https://openrouter.ai/api/v1
   model: string
