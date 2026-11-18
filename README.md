@@ -69,9 +69,9 @@ model's probability disagreed with yours.
 
 ## Status
 
-Early. Working: canvas, tree editing, undo, autosave, ask + verdicts, decide/park/reopen,
-deterministic review, markdown/JSON export. Not yet: Grill and Expand in the UI (logic staged),
-collaboration, sync, mobile layout.
+Early, but the whole loop works: canvas, tree editing, undo, autosave, ask + verdicts, grill,
+expand, decide/park/reopen, probability override, deterministic review, markdown/JSON export.
+Not yet: collaboration, sync, mobile layout, decision retrospectives.
 
 Build in progress is documented in `AGENTS.md` (local) and the spec outside this repo.
 
@@ -84,8 +84,11 @@ npm run typecheck   # tsc --noEmit
 npm run build       # typecheck + production bundle
 ```
 
-Static output in `dist/` — deploy to any static host (Vercel, Netlify, Pages). No env vars, no
-server.
+Static output in `dist/` — deploy to any static host. No env vars, no server, no database.
+
+GitHub Pages: push to `main` with `.github/workflows/pages.yml`, then enable
+*Settings → Pages → Source: GitHub Actions* once. Asset paths are relative, so it also works from
+a subpath, Netlify, Vercel or `python -m http.server dist`.
 
 ## License
 

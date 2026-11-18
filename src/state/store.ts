@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { askVerdict } from '../ai/client'
-import { buildAsk } from '../ai/prompts'
+import { askExpand, askGrill, askVerdict } from '../ai/client'
+import { buildAsk, buildExpand, buildGrill } from '../ai/prompts'
 import { demoProject } from '../demo'
 import { getKey, setKey } from '../lib/keys'
 import { loadProject, scheduleSave } from '../lib/storage'
@@ -44,6 +44,12 @@ type Store = {
   removeProvider: (id: string) => void
   setActiveProvider: (id: string) => void
   ask: (nodeId: string) => Promise<void>
+  /** Red-team the current pick (spec §4). Writes a counter, never a new pick. */
+  grill: (nodeId: string) => Promise<void>
+  /** Derive the requirements of the chosen option (spec §5.2). Appends ≤3 open children. */
+  expand: (nodeId: string) => Promise<void>
+  grillingId: string | null
+  expandingId: string | null
 
   /** Human-only verbs. Nothing in this file may be reachable from the AI path. */
   decide: (id: string, choice: string, rationale: string) => void
@@ -89,6 +95,19 @@ export const useStore = create<Store>((set, get) => {
   const commit = (root: Decision, select?: string | null): void =>
     commitProject({ ...get().project, root }, select)
 
+  /** One place decides which model answers and whether we are allowed to call it at all. */
+  const resolveProvider = () => {
+    const s = get()
+    const provider =
+      s.project.providers.find((p) => p.id === s.activeProviderId) ?? s.project.providers[0]
+    if (!provider) return { error: 'No model configured — open Settings.' as const }
+    const apiKey = getKey(provider.id)
+    if (!apiKey) {
+      return { error: `No API key saved for ${provider.label || provider.model}.` as const }
+    }
+    return { provider, apiKey }
+  }
+
   return {
     project: demoProject,
     selectedId: demoProject.root.id,
@@ -99,6 +118,8 @@ export const useStore = create<Store>((set, get) => {
     settingsOpen: false,
     askingId: null,
     askError: null,
+    grillingId: null,
+    expandingId: null,
     panel: 'node',
 
     hydrate: async () => {
@@ -324,19 +345,12 @@ export const useStore = create<Store>((set, get) => {
       const node = findNode(s.project.root, nodeId)
       if (!node) return
 
-      const provider =
-        s.project.providers.find((p) => p.id === s.activeProviderId) ?? s.project.providers[0]
-
-      if (!provider) {
-        set({ askError: 'No model configured — open Settings.' })
+      const resolved = resolveProvider()
+      if ('error' in resolved) {
+        set({ askError: resolved.error })
         return
       }
-
-      const apiKey = getKey(provider.id)
-      if (!apiKey) {
-        set({ askError: `No API key saved for ${provider.label || provider.model}.` })
-        return
-      }
+      const { provider, apiKey } = resolved
 
       set({ askingId: nodeId, askError: null })
 
@@ -370,6 +384,85 @@ export const useStore = create<Store>((set, get) => {
         set({ askError: error instanceof Error ? error.message : String(error) })
       } finally {
         set({ askingId: null })
+      }
+    },
+
+    grill: async (nodeId) => {
+      const node = findNode(get().project.root, nodeId)
+      const verdict = node?.verdicts[0]
+      if (!node || !verdict) return
+
+      const resolved = resolveProvider()
+      if ('error' in resolved) {
+        set({ askError: resolved.error })
+        return
+      }
+      const { provider, apiKey } = resolved
+
+      set({ grillingId: nodeId, askError: null })
+      try {
+        const result = await askGrill({
+          provider: { baseUrl: provider.baseUrl, model: provider.model, apiKey },
+          messages: buildGrill(get().project, node, verdict),
+        })
+
+        const current = get().project
+        if (!findNode(current.root, nodeId)) return
+
+        commit(
+          updateNode(current.root, nodeId, (n) =>
+            n.verdicts.length === 0
+              ? n
+              : {
+                  ...n,
+                  verdicts: n.verdicts.map((v, i) => (i === 0 ? { ...v, counter: result.counter } : v)),
+                },
+          ),
+        )
+      } catch (error) {
+        set({ askError: error instanceof Error ? error.message : String(error) })
+      } finally {
+        set({ grillingId: null })
+      }
+    },
+
+    expand: async (nodeId) => {
+      const node = findNode(get().project.root, nodeId)
+      if (!node || node.state !== 'decided' || !node.choice) return
+      const chosen = node.choice
+
+      const resolved = resolveProvider()
+      if ('error' in resolved) {
+        set({ askError: resolved.error })
+        return
+      }
+      const { provider, apiKey } = resolved
+
+      set({ expandingId: nodeId, askError: null })
+      try {
+        const result = await askExpand({
+          provider: { baseUrl: provider.baseUrl, model: provider.model, apiKey },
+          messages: buildExpand(get().project, node),
+        })
+
+        const current = get().project
+        const target = findNode(current.root, nodeId)
+        if (!target || target.state !== 'decided' || target.choice !== chosen) return
+
+        const children = result.questions.map((question) =>
+          newDecision({ kind: 'option', option: chosen }, question),
+        )
+
+        commit(
+          updateNode(current.root, nodeId, (n) => ({
+            ...n,
+            children: [...n.children, ...children],
+          })),
+        )
+      } catch (error) {
+        set({ askError: error instanceof Error ? error.message : String(error) })
+      } finally {
+        set({ expandingId: null })
       }
     },
   }

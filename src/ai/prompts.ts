@@ -1,6 +1,6 @@
 import { pOf } from '../model/ev.ts'
 import { pathTo } from '../model/hash.ts'
-import type { Decision, Project } from '../model/types.ts'
+import type { Decision, Project, Verdict } from '../model/types.ts'
 import type { ChatMessage } from './client.ts'
 
 const SYSTEM = [
@@ -53,7 +53,59 @@ export function buildAsk(project: Project, node: Decision): ChatMessage[] {
   ]
 }
 
-/** Derivation, not brainstorming — spec §5.2, milestone M4. */
-export function buildExpand(_project: Project, _node: Decision): ChatMessage[] {
-  throw new Error('buildExpand — spec §5.2, milestone M4')
+/**
+ * Grill — spec §4. Red-team the pick. This is the "yes? why no?" half of the user's question,
+ * and it must not be allowed to rewrite the verdict: it produces a counter, never a new pick.
+ */
+export function buildGrill(project: Project, node: Decision, verdict: Verdict): ChatMessage[] {
+  const path = pathTo(project.root, node.id)
+    .slice(0, -1)
+    .map((a) =>
+      a.state === 'decided' && a.choice
+        ? `- ${a.question} → decided: "${a.choice}"`
+        : `- ${a.question} → undecided`,
+    )
+
+  const user = [
+    `GOAL: ${project.goal}`,
+    '',
+    'CONTEXT:',
+    ...(path.length > 0 ? path : ['(this is the first decision)']),
+    '',
+    `QUESTION: ${node.question}`,
+    `OPTIONS: ${node.options.join(' | ')}`,
+    '',
+    `A previous answer picked "${verdict.pick}" because: ${verdict.why}`,
+    '',
+    'Argue the other side. What is the strongest case that this pick is wrong?',
+    'Then name the single fact that would make it wrong.',
+    'Return one JSON object: why, flipIf.',
+  ].join('\n')
+
+  return [
+    { role: 'system', content: SYSTEM },
+    { role: 'user', content: user },
+  ]
+}
+
+/**
+ * Expand — derivation, not brainstorming (spec §5.2). A child of a chosen option is a
+ * *requirement* of that option, so the question is "what must be true for this to work", never
+ * "what else is there to think about".
+ */
+export function buildExpand(project: Project, node: Decision): ChatMessage[] {
+  const user = [
+    `GOAL: ${project.goal}`,
+    '',
+    `DECIDED: ${node.question} → ${node.choice}`,
+    '',
+    'What must be true for that choice to work, and which decisions does it require?',
+    'Return at most 3 questions. Questions only: no answers, no options, no recommendations.',
+    'Return one JSON object: {"questions": string[]}',
+  ].join('\n')
+
+  return [
+    { role: 'system', content: SYSTEM },
+    { role: 'user', content: user },
+  ]
 }
