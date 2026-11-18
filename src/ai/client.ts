@@ -4,6 +4,8 @@ import {
   grillJsonSchema,
   parseExpand,
   parseGrill,
+  parsePremortem,
+  premortemJsonSchema,
   parseVerdict,
   verdictJsonSchema,
   type ParsedGrill,
@@ -94,6 +96,25 @@ export function askExpand(input: {
     inline: 'Return only a JSON object: {"questions":string[]} — at most 3 questions, no answers.',
     parse: parseExpand,
   }).then((result) => ({ questions: result.value.questions, model: result.model, tokens: result.tokens }))
+}
+
+export function askPremortem(input: {
+  provider: ProviderCredentials
+  messages: ChatMessage[]
+  signal?: AbortSignal
+}): Promise<{
+  reasons: { why: string; likelihood: 'low' | 'medium' | 'high' }[]
+  model: string
+}> {
+  return requestJson({
+    provider: input.provider,
+    messages: input.messages,
+    signal: input.signal,
+    schema: premortemJsonSchema,
+    inline:
+      'Return only a JSON object: {"reasons":[{"why":string (max 25 words),"likelihood":"low|medium|high"}]} — at most 3.',
+    parse: parsePremortem,
+  }).then((result) => ({ reasons: result.value.reasons, model: result.model }))
 }
 
 type ParseOutcome<T> = { ok: true; value: T } | { ok: false; error: string }

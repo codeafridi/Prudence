@@ -78,6 +78,15 @@ try {
   assert(redone.includes('→ do'), 'redo restores the choice')
   ok('undo and redo work')
 
+  step('schedule and record a review')
+  await page.getByRole('button', { name: '3m', exact: true }).click()
+  await page.waitForTimeout(200)
+  await page.getByPlaceholder('what happened? (optional)').fill('held up for the first month')
+  await page.getByRole('button', { name: 'worked', exact: true }).click()
+  await page.waitForTimeout(200)
+  assert((await page.textContent('body')).includes('checked'), 'review outcome is stored')
+  ok('review scheduled then recorded')
+
   step('grow the tree')
   await page.locator('button[title="Add a decision this option requires"]').first().click()
   await page.waitForTimeout(500)
@@ -105,6 +114,7 @@ try {
   const markdown = fs.readFileSync(file, 'utf8')
   assert(markdown.includes('decision log'), 'export has a title')
   assert(markdown.includes('postgres on one box'), 'export carries the rationale')
+  assert(markdown.includes('**Outcome:** worked'), 'export carries the review')
   ok(`${download.suggestedFilename()} (${markdown.length} bytes)`)
 
   step('reload persists')

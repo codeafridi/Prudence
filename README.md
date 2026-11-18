@@ -62,6 +62,10 @@ goal ──► decision ──► option ──► requirement ──► decisio
 - **Grill** — the strongest case against the pick.
 - **Expand** — "what must be true for this choice to work?" Not brainstorming: requirements.
 - **Decide** — pick an option and write one line. Required. No one-click accept, by design.
+- **Premortem** — "it's a year later and this failed — why?" Three likeliest reasons, each one
+  click from becoming a node.
+- **Review** — schedule a retrospective (1/3/6 months) when you decide, then record what actually
+  happened. The log becomes evidence instead of intention.
 - **Park / Reopen** — park is "not now"; reopen archives the old choice into `history`.
 
 Flags are computed, never stored: `premature` (parent undecided), `stale` (answered against a
@@ -74,8 +78,9 @@ model's probability disagreed with yours.
 ## Status
 
 Early, but the whole loop works: canvas, tree editing, undo, autosave, ask + verdicts, grill,
-expand, decide/park/reopen, probability override, deterministic review, markdown/JSON export.
-Not yet: collaboration, sync, mobile layout, decision retrospectives.
+expand, premortem, decide/park/reopen, probability override, scheduled retrospectives,
+deterministic review, markdown/JSON export.
+Not yet: node search, outline view, collaboration, sync, mobile layout.
 
 Build in progress is documented in `AGENTS.md` (local) and the spec outside this repo.
 

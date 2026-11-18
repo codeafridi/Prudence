@@ -22,6 +22,7 @@ export function Inspector() {
           <QuestionField key={node.id} node={node} />
           <VerdictSection node={node} />
           <DecisionSection key={`${node.id}-${node.state}`} node={node} />
+          <PremortemSection node={node} />
           <OptionsSection node={node} />
           <ChildrenSection node={node} />
           {node.id !== root.id && <DeleteButton node={node} />}
@@ -325,6 +326,8 @@ function DecisionSection({ node }: { node: Decision }) {
         </div>
       )}
 
+      {decided && <ReviewControls node={node} />}
+
       {node.history.length > 0 && (
         <details className="rounded border border-white/5 bg-black/20 px-2 py-1 text-[11px] text-white/45">
           <summary className="cursor-pointer text-white/35">
@@ -340,6 +343,131 @@ function DecisionSection({ node }: { node: Decision }) {
             ))}
           </ul>
         </details>
+      )}
+    </section>
+  )
+}
+
+function ReviewControls({ node }: { node: Decision }) {
+  const setReviewAt = useStore((s) => s.setReviewAt)
+  const recordReview = useStore((s) => s.recordReview)
+  const [note, setNote] = useState('')
+
+  const due = node.reviewAt !== undefined && node.reviewAt <= Date.now()
+
+  return (
+    <div className="space-y-1 rounded border border-white/5 bg-black/20 p-2">
+      <div className="flex items-center justify-between text-[10px] text-white/35">
+        <span>review</span>
+        {node.review ? (
+          <span className="text-white/50">{node.review.verdict}</span>
+        ) : node.reviewAt ? (
+          <span className={due ? 'text-amber-400/80' : 'text-white/40'}>
+            {due ? 'due ' : 'on '}
+            {new Date(node.reviewAt).toISOString().slice(0, 10)}
+            <button
+              onClick={() => setReviewAt(node.id, undefined)}
+              className="ml-1 text-white/25 hover:text-white"
+            >
+              ×
+            </button>
+          </span>
+        ) : (
+          <span className="flex gap-1">
+            {[
+              ['1m', 30],
+              ['3m', 90],
+              ['6m', 180],
+            ].map(([label, days]) => (
+              <button
+                key={label}
+                onClick={() => setReviewAt(node.id, days as number)}
+                className="rounded border border-white/10 px-1 hover:text-white"
+                title="Ask yourself later whether this was right"
+              >
+                {label}
+              </button>
+            ))}
+          </span>
+        )}
+      </div>
+
+      {node.review ? (
+        <p className="text-[11px] text-white/35">
+          checked {new Date(node.review.at).toISOString().slice(0, 10)}
+          {node.review.note ? ` — ${node.review.note}` : ''}
+        </p>
+      ) : (
+        <>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="what happened? (optional)"
+            className="w-full rounded border border-white/10 bg-black/30 px-1.5 py-1 text-[11px] outline-none focus:border-white/25"
+          />
+          <div className="flex gap-1">
+            {(['worked', 'mixed', 'failed'] as const).map((verdict) => (
+              <button
+                key={verdict}
+                onClick={() => recordReview(node.id, verdict, note)}
+                className="flex-1 rounded border border-white/10 px-1 py-0.5 text-[10px] text-white/50 hover:border-white/30 hover:text-white"
+              >
+                {verdict}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function PremortemSection({ node }: { node: Decision }) {
+  const premortem = useStore((s) => s.premortem)
+  const busy = useStore((s) => s.premortemId) === node.id
+  const promote = useStore((s) => s.promoteReason)
+
+  if (node.state !== 'decided') return null
+
+  return (
+    <section>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wider text-white/35">Premortem</span>
+        <button
+          onClick={() => void premortem(node.id)}
+          disabled={busy}
+          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-white/70 hover:border-white/35 hover:text-white disabled:opacity-40"
+          title="Assume this failed in a year — why?"
+        >
+          {busy ? 'thinking…' : node.premortem ? 'again' : 'run'}
+        </button>
+      </div>
+
+      {node.premortem ? (
+        <ul className="mt-1 space-y-1">
+          {node.premortem.reasons.map((reason) => (
+            <li
+              key={reason.why}
+              className="flex items-start gap-1 rounded border border-white/5 bg-black/20 px-1.5 py-1 text-[11px]"
+            >
+              <span className="min-w-0 flex-1 text-white/55">{reason.why}</span>
+              <span className="shrink-0 text-[10px] uppercase text-amber-400/60">
+                {reason.likelihood}
+              </span>
+              <button
+                onClick={() => promote(node.id, reason.why)}
+                title="Make this a decision to think about"
+                className="shrink-0 text-white/30 hover:text-white"
+              >
+                +
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-[11px] text-white/25">
+          Imagine it failed a year from now. Worth asking before you commit.
+        </p>
       )}
     </section>
   )

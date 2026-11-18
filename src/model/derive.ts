@@ -68,7 +68,9 @@ export function derive(project: Project): Derived {
       sourceHandle: handleId,
       target: decision.id,
       type: 'smoothstep',
-      label: truncateLabel(via.kind === 'option' ? via.option : 'assumed'),
+      label: truncateLabel(
+        via.kind === 'option' ? via.option : via.kind === 'risk' ? 'risk' : 'assumed',
+      ),
       labelStyle: { fill: abandoned ? '#52525b' : '#a1a1aa', fontSize: 10 },
       labelBgStyle: { fill: '#0b0b0d', fillOpacity: 0.85 },
       labelBgPadding: [3, 2] as [number, number],

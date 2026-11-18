@@ -213,3 +213,31 @@ test('sprawl needs a real tree before it fires', () => {
   ])
   assert.ok(rules(project(wide)).includes('sprawl'))
 })
+
+test('a review date in the past is reported, one in the future is not', () => {
+  const root = node({
+    id: 'root',
+    state: 'decided',
+    choice: 'a',
+    rationale: 'decided for a specific reason here',
+    reviewAt: Date.now() - 1000,
+    verdicts: [verdict('a', [consequence('a', 0.9), consequence('b', 0.1)])],
+  })
+  assert.ok(rules(project(root)).includes('review-due'))
+
+  const later = { ...root, reviewAt: Date.now() + 86_400_000 }
+  assert.equal(rules(project(later)).includes('review-due'), false)
+})
+
+test('a reviewed decision is no longer due', () => {
+  const root = node({
+    id: 'root',
+    state: 'decided',
+    choice: 'a',
+    rationale: 'decided for a specific reason here',
+    reviewAt: Date.now() - 1000,
+    review: { verdict: 'worked', at: Date.now() },
+    verdicts: [verdict('a', [consequence('a', 0.9), consequence('b', 0.1)])],
+  })
+  assert.equal(rules(project(root)).includes('review-due'), false)
+})

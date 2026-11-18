@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { askExpand, askGrill, askVerdict } from '../ai/client'
-import { buildAsk, buildExpand, buildGrill } from '../ai/prompts'
+import { askExpand, askGrill, askPremortem, askVerdict } from '../ai/client'
+import { buildAsk, buildExpand, buildGrill, buildPremortem } from '../ai/prompts'
 import { demoProject } from '../demo'
 import { getKey, setKey } from '../lib/keys'
 import { loadProject, scheduleSave } from '../lib/storage'
@@ -48,6 +48,14 @@ type Store = {
   grill: (nodeId: string) => Promise<void>
   /** Derive the requirements of the chosen option (spec §5.2). Appends ≤3 open children. */
   expand: (nodeId: string) => Promise<void>
+  /** Assume the choice failed and name why. (§"Premortem") */
+  premortem: (nodeId: string) => Promise<void>
+  /** Turn a premortem reason into a node, so it can be decided rather than worried about. */
+  promoteReason: (nodeId: string, reason: string) => void
+  /** Schedule the retrospective; `inDays` undefined clears it. */
+  setReviewAt: (id: string, inDays: number | undefined) => void
+  recordReview: (id: string, verdict: 'worked' | 'failed' | 'mixed', note?: string) => void
+  premortemId: string | null
   grillingId: string | null
   expandingId: string | null
 
@@ -120,6 +128,7 @@ export const useStore = create<Store>((set, get) => {
     askError: null,
     grillingId: null,
     expandingId: null,
+    premortemId: null,
     panel: 'node',
 
     hydrate: async () => {
@@ -385,6 +394,65 @@ export const useStore = create<Store>((set, get) => {
       } finally {
         set({ askingId: null })
       }
+    },
+
+    premortem: async (nodeId) => {
+      const node = findNode(get().project.root, nodeId)
+      if (!node || node.state !== 'decided' || !node.choice) return
+
+      const resolved = resolveProvider()
+      if ('error' in resolved) {
+        set({ askError: resolved.error })
+        return
+      }
+      const { provider, apiKey } = resolved
+
+      set({ premortemId: nodeId, askError: null })
+      try {
+        const result = await askPremortem({
+          provider: { baseUrl: provider.baseUrl, model: provider.model, apiKey },
+          messages: buildPremortem(get().project, node),
+        })
+
+        const current = get().project
+        if (!findNode(current.root, nodeId)) return
+
+        commit(
+          updateNode(current.root, nodeId, (n) => ({
+            ...n,
+            premortem: { reasons: result.reasons, at: Date.now(), model: result.model },
+          })),
+        )
+      } catch (error) {
+        set({ askError: error instanceof Error ? error.message : String(error) })
+      } finally {
+        set({ premortemId: null })
+      }
+    },
+
+    promoteReason: (nodeId, reason) => {
+      const child = newDecision({ kind: 'risk' }, `What if: ${reason}`)
+      commit(addChild(get().project.root, nodeId, child), child.id)
+    },
+
+    setReviewAt: (id, inDays) => {
+      commit(
+        updateNode(get().project.root, id, (n) => ({
+          ...n,
+          reviewAt: inDays === undefined ? undefined : Date.now() + inDays * 86_400_000,
+        })),
+      )
+    },
+
+    recordReview: (id, verdict, note) => {
+      const trimmed = note?.trim()
+      commit(
+        updateNode(get().project.root, id, (n) => ({
+          ...n,
+          reviewAt: undefined,
+          review: { verdict, note: trimmed || undefined, at: Date.now() },
+        })),
+      )
     },
 
     grill: async (nodeId) => {

@@ -109,3 +109,29 @@ export function buildExpand(project: Project, node: Decision): ChatMessage[] {
     { role: 'user', content: user },
   ]
 }
+
+/**
+ * Premortem — Klein via decision-journal practice. Not "what could go wrong" in the abstract:
+ * assume the choice already failed and name the likeliest reasons. Reuses the verdict's context so
+ * the failure modes are about *this* option, not decisions in general.
+ */
+export function buildPremortem(project: Project, node: Decision): ChatMessage[] {
+  const user = [
+    `GOAL: ${project.goal}`,
+    '',
+    `DECIDED: ${node.question} → ${node.choice}`,
+    node.rationale ? `REASONING: ${node.rationale}` : '',
+    '',
+    'It is twelve months from now and this choice has failed.',
+    'Name the three most likely reasons it failed. Be specific to this option, not generic risk.',
+    'For each, give a likelihood: low, medium or high. No mitigations, no reassurance.',
+    'Return one JSON object: {"reasons":[{"why": string, "likelihood": "low|medium|high"}]}',
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
+
+  return [
+    { role: 'system', content: SYSTEM },
+    { role: 'user', content: user },
+  ]
+}

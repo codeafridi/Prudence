@@ -34,8 +34,27 @@ export type Verdict = {
 export type Via =
   | { kind: 'option'; option: string } // requirement of choosing that option (§5.2 Expand)
   | { kind: 'assumption' } // promoted from a verdict's `unknowns[]`
+  | { kind: 'risk' } // promoted from a premortem reason
 
 export type DecisionState = 'open' | 'asked' | 'decided' | 'parked'
+
+export type Likelihood = 'low' | 'medium' | 'high'
+
+/** "It is a year later and this failed" — Klein's premortem, stored with the decision. */
+export type Premortem = {
+  reasons: { why: string; likelihood: Likelihood }[]
+  at: number
+  model: string
+}
+
+export type ReviewVerdict = 'worked' | 'failed' | 'mixed'
+
+/** What actually happened. The reason the log is worth keeping. */
+export type Review = {
+  verdict: ReviewVerdict
+  note?: string
+  at: number
+}
 
 export type Decision = {
   id: string
@@ -51,6 +70,9 @@ export type Decision = {
   history: { choice: string; rationale: string; pOverride?: number; at: number }[]
   children: Decision[]
   pos?: { x: number; y: number } // survives re-layout when dragged
+  premortem?: Premortem
+  reviewAt?: number // when to ask yourself whether this was right
+  review?: Review // what actually happened
 }
 
 export type Provider = {

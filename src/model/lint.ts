@@ -19,6 +19,7 @@ export type Finding = {
     | 'at-risk'
     | 'sprawl'
     | 'duplicate-question'
+    | 'review-due'
   nodeId: string
   detail: string
 }
@@ -152,6 +153,15 @@ export function lint(project: Project): Finding[] {
       })
     }
 
+    // 9. the retrospective you scheduled and forgot
+    if (decided && !node.review && node.reviewAt !== undefined && node.reviewAt <= Date.now()) {
+      findings.push({
+        rule: 'review-due',
+        nodeId: node.id,
+        detail: 'due for review — was this right?',
+      })
+    }
+
     for (const child of node.children) {
       const dead =
         ctx.dead ||
@@ -180,7 +190,7 @@ export function lint(project: Project): Finding[] {
     })
   }
 
-  // 10. duplicate questions
+  // 11. duplicate questions
   const tokenised = all.map((n) => ({ node: n, tokens: tokens(n.question) }))
   for (let i = 0; i < tokenised.length; i++) {
     for (let j = i + 1; j < tokenised.length; j++) {

@@ -37,6 +37,22 @@ function writeNode(project: Project, node: Decision, depth: number, out: string[
     if (node.rationale) out.push(`> ${node.rationale}`, '')
     const ai = aiLine(project, node)
     if (ai) out.push(ai, '')
+
+    if (node.premortem) {
+      out.push('Premortem — if this failed, most likely because:', '')
+      for (const reason of node.premortem.reasons) {
+        out.push(`- ${reason.why} _(${reason.likelihood})_`)
+      }
+      out.push('')
+    }
+
+    if (node.review) {
+      out.push(`**Outcome:** ${node.review.verdict}${formatDate(node.review.at)}`)
+      if (node.review.note) out.push('', `> ${node.review.note}`)
+      out.push('')
+    } else if (node.reviewAt) {
+      out.push(`_Review due ${new Date(node.reviewAt).toISOString().slice(0, 10)}._`, '')
+    }
   } else {
     out.push(`**${node.state === 'parked' ? 'Parked' : 'Open'}** — not decided yet`, '')
   }
@@ -51,7 +67,12 @@ function writeNode(project: Project, node: Decision, depth: number, out: string[
 }
 
 function writeRejected(child: Decision, out: string[]): void {
-  const via = child.via?.kind === 'option' ? child.via.option : 'assumed'
+  const via =
+    child.via?.kind === 'option'
+      ? child.via.option
+      : child.via?.kind === 'risk'
+        ? 'risk'
+        : 'assumed'
   const summary = `rejected: ${via} — ${child.question}`
   out.push(`<details><summary>${summary}</summary>`, '')
   if (child.state === 'decided' && child.choice) {
@@ -97,9 +118,12 @@ function rejectedChildren(node: Decision): Decision[] {
   return node.children.filter((c) => isRejected(node, c))
 }
 
+function formatDate(timestamp: number): string {
+  return ` — ${new Date(timestamp).toISOString().slice(0, 10)}`
+}
+
 function dateOf(node: Decision): string {
-  if (!node.decidedAt) return ''
-  return ` — ${new Date(node.decidedAt).toISOString().slice(0, 10)}`
+  return node.decidedAt ? formatDate(node.decidedAt) : ''
 }
 
 function collect(root: Decision): Decision[] {

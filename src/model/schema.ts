@@ -76,6 +76,7 @@ function capWords(text: string, max: number): string {
 }
 
 export const MAX_GRILL_WORDS = 40
+export const MAX_PREMORTEM_REASONS = 3
 export const MAX_QUESTION_WORDS = 20
 export const MAX_EXPAND_QUESTIONS = 3
 
@@ -131,6 +132,42 @@ function formatIssues(issues: { path: PropertyKey[]; message: string }[]): strin
   return issues.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`).join('; ')
 }
 
+const premortemBodySchema = z.object({
+  reasons: z
+    .array(
+      z.object({
+        why: z.string().min(1),
+        likelihood: z.enum(['low', 'medium', 'high']),
+      }),
+    )
+    .min(1)
+    .max(8),
+})
+
+export type ParsedPremortem = { reasons: { why: string; likelihood: 'low' | 'medium' | 'high' }[] }
+
+/** Premortem reasons — short, de-duplicated, capped at three (spec "premortem"). */
+export function parsePremortem(
+  input: unknown,
+): { ok: true; value: ParsedPremortem } | { ok: false; error: string } {
+  const parsed = premortemBodySchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: formatIssues(parsed.error.issues) }
+
+  const seen = new Set<string>()
+  const reasons: ParsedPremortem['reasons'] = []
+  for (const reason of parsed.data.reasons) {
+    const why = capWords(reason.why, MAX_WHY_WORDS)
+    const key = why.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    reasons.push({ why, likelihood: reason.likelihood })
+    if (reasons.length === MAX_PREMORTEM_REASONS) break
+  }
+
+  if (reasons.length === 0) return { ok: false, error: 'no usable reasons' }
+  return { ok: true, value: { reasons } }
+}
+
 /** Sent as `response_format.json_schema` — OpenAI strict mode requires every field listed. */
 export const verdictJsonSchema = {
   type: 'object',
@@ -184,6 +221,27 @@ export const expandJsonSchema = {
       type: 'array',
       maxItems: 3,
       items: { type: 'string', description: 'a decision this choice requires, at most 20 words' },
+    },
+  },
+} as const
+
+export const premortemJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['reasons'],
+  properties: {
+    reasons: {
+      type: 'array',
+      maxItems: 3,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['why', 'likelihood'],
+        properties: {
+          why: { type: 'string', description: 'at most 25 words' },
+          likelihood: { type: 'string', enum: ['low', 'medium', 'high'] },
+        },
+      },
     },
   },
 } as const

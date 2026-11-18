@@ -114,6 +114,31 @@ test('stats count decisions and closure', () => {
   assert.match(md, /3 decisions · 0\/1 closed without children \(0%\)/)
 })
 
+test('premortem reasons and the outcome make it into the log', () => {
+  const base = fixture()
+  base.root.premortem = {
+    reasons: [
+      { why: 'traffic outgrew one box', likelihood: 'high' },
+      { why: 'provider changed pricing', likelihood: 'low' },
+    ],
+    at: Date.now(),
+    model: 'test',
+  }
+  base.root.review = { verdict: 'worked', note: 'held for eight months', at: Date.UTC(2027, 4, 2) }
+
+  const md = exportMarkdown(base)
+  assert.match(md, /Premortem — if this failed/)
+  assert.match(md, /traffic outgrew one box _\(high\)_/)
+  assert.match(md, /\*\*Outcome:\*\* worked — 2027-05-02/)
+  assert.match(md, /> held for eight months/)
+})
+
+test('a pending review shows its due date', () => {
+  const base = fixture()
+  base.root.reviewAt = Date.UTC(2027, 1, 1)
+  assert.match(exportMarkdown(base), /_Review due 2027-02-01\._/)
+})
+
 test('json export strips api keys', () => {
   const json = exportJson(fixture())
   assert.doesNotMatch(json, /sk-secret/)

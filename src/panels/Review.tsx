@@ -15,6 +15,7 @@ const LABEL: Record<Finding['rule'], string> = {
   'at-risk': 'at risk',
   sprawl: 'sprawl',
   'duplicate-question': 'duplicate question',
+  'review-due': 'review due',
 }
 
 export function Review() {
