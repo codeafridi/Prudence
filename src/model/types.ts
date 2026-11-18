@@ -45,6 +45,7 @@ export type Decision = {
   state: DecisionState
   choice?: string // one of options; human only
   rationale?: string // required when decided
+  decidedAt?: number // set by Decide; the export uses it for the retrospective date
   pOverride?: number // human's p for `choice`, beats the AI's
   verdicts: Verdict[] // newest first
   history: { choice: string; rationale: string; pOverride?: number; at: number }[]
