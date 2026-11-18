@@ -14,11 +14,11 @@ import { DecisionNodeView } from './DecisionNode'
 const nodeTypes = { decision: DecisionNodeView }
 
 export function Canvas() {
-  const root = useStore((s) => s.project.root)
+  const project = useStore((s) => s.project)
   const select = useStore((s) => s.select)
   const setPos = useStore((s) => s.setPos)
 
-  const derived = useMemo(() => derive(root), [root])
+  const derived = useMemo(() => derive(project), [project])
 
   // React Flow owns drag in flight; the tree owns the resting position (persisted via `pos`).
   const [nodes, setNodes, onNodesChange] = useNodesState(derived.nodes)

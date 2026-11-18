@@ -1,6 +1,10 @@
 import { create } from 'zustand'
+import { askVerdict } from '../ai/client'
+import { buildAsk } from '../ai/prompts'
 import { demoProject } from '../demo'
+import { getKey, setKey } from '../lib/keys'
 import { loadProject, scheduleSave } from '../lib/storage'
+import { contextHash } from '../model/hash'
 import {
   addChild,
   canRemoveOption,
@@ -10,7 +14,7 @@ import {
   removeNode,
   updateNode,
 } from '../model/ops'
-import type { Decision, Project, Via } from '../model/types'
+import type { Decision, Project, Provider, Verdict, Via } from '../model/types'
 
 /**
  * The only writer of the tree. Every mutation snapshots the previous project so undo stays
@@ -27,8 +31,19 @@ type Store = {
   future: Project[]
   hydrated: boolean
 
+  activeProviderId: string | null
+  settingsOpen: boolean
+  askingId: string | null
+  askError: string | null
+
   hydrate: () => Promise<void>
   select: (id: string | null) => void
+  openSettings: () => void
+  closeSettings: () => void
+  saveProvider: (provider: Provider, apiKey?: string) => void
+  removeProvider: (id: string) => void
+  setActiveProvider: (id: string) => void
+  ask: (nodeId: string) => Promise<void>
 
   rename: (id: string, question: string) => void
   addOption: (id: string, option: string) => void
@@ -43,10 +58,10 @@ type Store = {
 }
 
 export const useStore = create<Store>((set, get) => {
-  /** All writes go through here: snapshot, save, then swap the root. */
-  const commit = (root: Decision, select?: string | null): void => {
+  /** All writes go through here: snapshot, save, then swap the project. */
+  const commitProject = (next: Project, select?: string | null): void => {
     const s = get()
-    const project: Project = { ...s.project, root, updatedAt: Date.now() }
+    const project: Project = { ...next, updatedAt: Date.now() }
     if (s.hydrated) scheduleSave(project)
 
     set({
@@ -57,12 +72,19 @@ export const useStore = create<Store>((set, get) => {
     })
   }
 
+  const commit = (root: Decision, select?: string | null): void =>
+    commitProject({ ...get().project, root }, select)
+
   return {
     project: demoProject,
     selectedId: demoProject.root.id,
     past: [],
     future: [],
     hydrated: false,
+    activeProviderId: null,
+    settingsOpen: false,
+    askingId: null,
+    askError: null,
 
     hydrate: async () => {
       const stored = await loadProject()
@@ -141,6 +163,87 @@ export const useStore = create<Store>((set, get) => {
         past: [...s.past, s.project].slice(-UNDO_DEPTH),
         future: s.future.slice(1),
       })
+    },
+
+    openSettings: () => set({ settingsOpen: true }),
+    closeSettings: () => set({ settingsOpen: false }),
+
+    saveProvider: (provider, apiKey) => {
+      if (apiKey !== undefined) setKey(provider.id, apiKey)
+
+      const s = get()
+      const exists = s.project.providers.some((p) => p.id === provider.id)
+      const providers = exists
+        ? s.project.providers.map((p) => (p.id === provider.id ? provider : p))
+        : [...s.project.providers, provider]
+
+      commitProject({ ...s.project, providers })
+      if (!get().activeProviderId) set({ activeProviderId: provider.id })
+    },
+
+    removeProvider: (id) => {
+      const s = get()
+      setKey(id, '')
+      set({
+        project: { ...s.project, providers: s.project.providers.filter((p) => p.id !== id) },
+        activeProviderId: s.activeProviderId === id ? null : s.activeProviderId,
+      })
+    },
+
+    setActiveProvider: (id) => set({ activeProviderId: id }),
+
+    ask: async (nodeId) => {
+      const s = get()
+      const node = findNode(s.project.root, nodeId)
+      if (!node) return
+
+      const provider =
+        s.project.providers.find((p) => p.id === s.activeProviderId) ?? s.project.providers[0]
+
+      if (!provider) {
+        set({ askError: 'No model configured — open Settings.' })
+        return
+      }
+
+      const apiKey = getKey(provider.id)
+      if (!apiKey) {
+        set({ askError: `No API key saved for ${provider.label || provider.model}.` })
+        return
+      }
+
+      set({ askingId: nodeId, askError: null })
+
+      try {
+        const result = await askVerdict({
+          provider: { baseUrl: provider.baseUrl, model: provider.model, apiKey },
+          messages: buildAsk(s.project, node),
+          options: node.options,
+        })
+
+        // The tree may have changed while the request was in flight: re-read before writing.
+        const current = get().project
+        if (!findNode(current.root, nodeId)) return
+
+        const verdict: Verdict = {
+          ...result.verdict,
+          contextHash: contextHash(current, nodeId),
+          model: result.model,
+          tokens: result.tokens,
+          at: Date.now(),
+        }
+
+        commit(
+          updateNode(current.root, nodeId, (n) => ({
+            ...n,
+            state: n.state === 'open' ? 'asked' : n.state,
+            verdicts: [verdict, ...n.verdicts],
+          })),
+        )
+      } catch (error) {
+        set({ askError: error instanceof Error ? error.message : String(error) })
+      } finally {
+        set({ askingId: null })
+      }
     },
   }
 })

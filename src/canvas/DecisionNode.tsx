@@ -10,8 +10,8 @@ const dot: Record<string, string> = {
 }
 
 export function DecisionNodeView({ data, selected }: NodeProps<DecisionNode>) {
-  const { decision, flags, explored } = data
-  const n = decision.options.length
+  const { decision, flags, explored, recommended, stale } = data
+  const count = decision.options.length
 
   return (
     <div
@@ -25,6 +25,7 @@ export function DecisionNodeView({ data, selected }: NodeProps<DecisionNode>) {
       <div className="flex items-start gap-2">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot[decision.state]}`} />
         <p className="line-clamp-2 text-[13px] leading-snug text-white/90">{decision.question}</p>
+        {stale && <span className="ml-auto text-[10px] text-amber-400" title="answered against a different tree">●</span>}
       </div>
 
       <div className="mt-2 flex items-center justify-between text-[10px] text-white/35">
@@ -33,17 +34,23 @@ export function DecisionNodeView({ data, selected }: NodeProps<DecisionNode>) {
       </div>
 
       {/* one source handle per option — the fork IS the decision (§6) */}
-      {decision.options.map((option, i) => (
-        <Handle
-          key={option}
-          id={String(i)}
-          type="source"
-          position={Position.Bottom}
-          title={option}
-          className="!h-2 !w-2 !border-0 !bg-white/30"
-          style={{ left: `${((i + 1) / (n + 1)) * 100}%` }}
-        />
-      ))}
+      {decision.options.map((option, i) => {
+        const picked = recommended === option
+        return (
+          <Handle
+            key={option}
+            id={String(i)}
+            type="source"
+            position={Position.Bottom}
+            title={picked ? `AI pick: ${option}` : option}
+            className={[
+              '!h-2 !w-2 !border-0',
+              picked ? '!bg-emerald-400 !shadow-[0_0_6px_rgba(52,211,153,0.9)]' : '!bg-white/30',
+            ].join(' ')}
+            style={{ left: `${((i + 1) / (count + 1)) * 100}%` }}
+          />
+        )
+      })}
 
       {/* assumption children hang off the left, so they read differently from requirements (§6) */}
       <Handle

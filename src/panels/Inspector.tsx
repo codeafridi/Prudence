@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { isFresh } from '../model/hash'
 import { canRemoveOption, countNodes, findNode } from '../model/ops'
-import type { Decision } from '../model/types'
+import type { Decision, Verdict } from '../model/types'
 import { useStore } from '../state/store'
 
 export function Inspector() {
@@ -19,6 +20,7 @@ export function Inspector() {
       ) : (
         <div className="space-y-4">
           <QuestionField key={node.id} node={node} />
+          <VerdictSection node={node} />
           <OptionsSection node={node} />
           <ChildrenSection node={node} />
           {node.id !== root.id && <DeleteButton node={node} />}
@@ -58,6 +60,95 @@ function QuestionField({ node }: { node: Decision }) {
         className="mt-1 w-full resize-none rounded border border-white/10 bg-black/30 px-2 py-1.5 text-[13px] leading-snug outline-none focus:border-white/30"
       />
     </label>
+  )
+}
+
+function VerdictSection({ node }: { node: Decision }) {
+  const project = useStore((s) => s.project)
+  const ask = useStore((s) => s.ask)
+  const asking = useStore((s) => s.askingId) === node.id
+  const askError = useStore((s) => s.askError)
+  const openSettings = useStore((s) => s.openSettings)
+  const hasProvider = project.providers.length > 0
+  const latest = node.verdicts[0]
+
+  return (
+    <section>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wider text-white/35">Ask</span>
+        <button
+          onClick={() => void ask(node.id)}
+          disabled={asking}
+          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-white/80 hover:border-white/35 hover:text-white disabled:opacity-40"
+        >
+          {asking ? 'asking…' : latest ? 'ask again' : 'ask'}
+        </button>
+      </div>
+
+      {!hasProvider && (
+        <button
+          onClick={openSettings}
+          className="mt-1 w-full rounded border border-dashed border-white/15 px-2 py-1 text-[11px] text-white/40 hover:text-white"
+        >
+          no model configured — add one
+        </button>
+      )}
+
+      {askError && <p className="mt-1 text-[11px] leading-snug text-red-400/80">{askError}</p>}
+
+      {latest ? (
+        <VerdictCard verdict={latest} stale={!isFresh(project, node)} />
+      ) : (
+        <p className="mt-1 text-[11px] text-white/25">
+          No answer yet. You can also decide without asking.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function VerdictCard({ verdict, stale }: { verdict: Verdict; stale: boolean }) {
+  return (
+    <div className="mt-2 space-y-2 rounded border border-white/10 bg-black/25 p-2">
+      <p className="text-xs text-white/85">
+        <span className="text-emerald-400">pick</span> {verdict.pick}
+        {stale && <span className="ml-2 text-[10px] text-amber-400">stale</span>}
+      </p>
+      <p className="text-[11px] leading-snug text-white/55">{verdict.why}</p>
+
+      <ul className="space-y-1">
+        {verdict.perOption.map((c) => (
+          <li key={c.option} className="rounded bg-white/[0.03] px-1.5 py-1 text-[11px]">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-white/70">{c.option}</span>
+              <span className="shrink-0 font-mono text-[10px] text-white/40">
+                p {c.p.toFixed(2)} · {c.reversible ? 'reversible' : 'one-way'}
+              </span>
+            </div>
+            <p className="text-white/40">{c.outcome}</p>
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-[11px] leading-snug text-white/45">
+        <span className="text-white/30">flip if </span>
+        {verdict.flipIf}
+      </p>
+
+      {verdict.unknowns.length > 0 && (
+        <ul className="space-y-0.5 border-t border-white/5 pt-1">
+          {verdict.unknowns.map((u) => (
+            <li key={u} className="text-[11px] text-sky-300/70">
+              assumed: {u}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="text-[10px] text-white/20">
+        {verdict.model} · {verdict.tokens.in + verdict.tokens.out} tokens
+      </p>
+    </div>
   )
 }
 

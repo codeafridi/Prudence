@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Canvas } from './canvas/Canvas'
 import { countNodes } from './model/ops'
 import { Inspector } from './panels/Inspector'
+import { Settings } from './panels/Settings'
 import { useStore } from './state/store'
 
 export function App() {
@@ -13,6 +14,10 @@ export function App() {
   const redo = useStore((s) => s.redo)
   const canUndo = useStore((s) => s.past.length > 0)
   const canRedo = useStore((s) => s.future.length > 0)
+  const openSettings = useStore((s) => s.openSettings)
+  const activeProvider =
+    useStore((s) => s.project.providers.find((p) => p.id === s.activeProviderId)) ??
+    useStore((s) => s.project.providers[0])
 
   useEffect(() => {
     void hydrate()
@@ -37,6 +42,13 @@ export function App() {
         <span className="ml-auto text-[11px] text-white/30">
           {countNodes(project.root)} nodes
         </span>
+        <button
+          onClick={openSettings}
+          className="max-w-48 truncate rounded border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:border-white/25 hover:text-white"
+          title="Model settings"
+        >
+          {activeProvider ? activeProvider.label : 'no model'}
+        </button>
         <button
           onClick={undo}
           disabled={!canUndo}
@@ -70,6 +82,7 @@ export function App() {
         </div>
         <Inspector />
       </main>
+      <Settings />
     </div>
   )
 }
