@@ -3,6 +3,8 @@
 A decision canvas for building things. You are the director; the AI is a worker you summon per
 question. It never decides, never structures your project, and never runs when you're not looking.
 
+**Try it: https://codeafridi.github.io/Prudence/** — no account, no key needed to use the canvas.
+
 Most AI planning tools generate a plan for you. Prudence interrogates the one you're already
 holding: ask a question, get a yes/no/conditional with the consequence of each option, then make
 the call yourself and write down why.
