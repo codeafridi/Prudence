@@ -2,7 +2,10 @@ import {
   Background,
   Controls,
   ReactFlow,
+  ReactFlowProvider,
+  useNodesInitialized,
   useNodesState,
+  useReactFlow,
   type NodeMouseHandler,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -14,7 +17,16 @@ import { DecisionNodeView } from './DecisionNode'
 const nodeTypes = { decision: DecisionNodeView }
 
 export function Canvas() {
+  return (
+    <ReactFlowProvider>
+      <Flow />
+    </ReactFlowProvider>
+  )
+}
+
+function Flow() {
   const project = useStore((s) => s.project)
+  const hydrated = useStore((s) => s.hydrated)
   const select = useStore((s) => s.select)
   const setPos = useStore((s) => s.setPos)
 
@@ -23,6 +35,20 @@ export function Canvas() {
   // React Flow owns drag in flight; the tree owns the resting position (persisted via `pos`).
   const [nodes, setNodes, onNodesChange] = useNodesState(derived.nodes)
   useEffect(() => setNodes(derived.nodes), [derived, setNodes])
+
+  const { fitView } = useReactFlow()
+  const nodesInitialized = useNodesInitialized()
+  const count = derived.nodes.length
+
+  // Growing the tree should stay on screen without a manual pan. fitView is a no-op until every
+  // node has measured dimensions, so gate on that rather than on a timer.
+  // `shortcut: refit on node-count or hydration change only; a rename does not reframe the view.`
+  useEffect(() => {
+    if (!nodesInitialized) return
+    // v13 takes padding in pixels; a fraction is read as ~0 and the graph overflows the viewport.
+    const timer = setTimeout(() => fitView({ padding: 60, duration: 200 }), 40)
+    return () => clearTimeout(timer)
+  }, [count, hydrated, nodesInitialized, fitView])
 
   const onNodeClick: NodeMouseHandler = (_, node) => select(node.id)
 
@@ -35,7 +61,7 @@ export function Canvas() {
       onNodeClick={onNodeClick}
       onNodeDragStop={(_, node) => setPos(node.id, { x: node.position.x, y: node.position.y })}
       onPaneClick={() => select(null)}
-      fitView
+      fitViewOptions={{ padding: 60 }}
       minZoom={0.15}
       proOptions={{ hideAttribution: true }}
       nodesConnectable={false}

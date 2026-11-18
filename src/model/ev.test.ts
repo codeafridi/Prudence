@@ -54,6 +54,11 @@ test('pOverride beats the model and only applies to a decided node', () => {
   assert.equal(pOf(decided), 0.9)
   assert.equal(pOf({ ...decided, pOverride: 0.3 }), 0.3)
   assert.equal(pOf({ ...decided, state: 'open' }), 1)
+  assert.equal(
+    pOf({ ...decided, verdicts: [] }),
+    1,
+    'no estimate is no information, not 50/50',
+  )
 })
 
 test('effectiveP multiplies only live decided requirement children', () => {

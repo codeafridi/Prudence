@@ -11,7 +11,9 @@ export const ev = (c: Consequence): number => c.p * c.ifWorks + (1 - c.p) * c.if
 export function pOf(node: Decision): number {
   if (node.state !== 'decided' || !node.choice) return 1
   if (node.pOverride !== undefined) return node.pOverride
-  return consequenceFor(node, node.choice)?.p ?? 0.5
+  // No estimate is no information, not a coin flip: returning 0.5 here would make an unasked
+  // tree drift into "at risk" purely by multiplication.
+  return consequenceFor(node, node.choice)?.p ?? 1
 }
 
 function consequenceFor(node: Decision, option: string): Consequence | undefined {

@@ -46,6 +46,10 @@ function flatten(root: Decision): Entry[] {
   return out
 }
 
+function truncateLabel(text: string, max = 24): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`
+}
+
 export function derive(project: Project): Derived {
   const entries = flatten(project.root)
   const path = new Set(recommendedPath(project.root))
@@ -64,9 +68,10 @@ export function derive(project: Project): Derived {
       sourceHandle: handleId,
       target: decision.id,
       type: 'smoothstep',
-      label: via.kind === 'option' ? via.option : 'assumed',
-      labelStyle: { fill: abandoned ? '#6b7280' : '#9ca3af', fontSize: 11 },
-      labelBgStyle: { fill: '#0b0b0d', fillOpacity: 0.9 },
+      label: truncateLabel(via.kind === 'option' ? via.option : 'assumed'),
+      labelStyle: { fill: abandoned ? '#52525b' : '#a1a1aa', fontSize: 10 },
+      labelBgStyle: { fill: '#0b0b0d', fillOpacity: 0.85 },
+      labelBgPadding: [3, 2] as [number, number],
       style: abandoned
         ? { stroke: '#3f3f46', strokeDasharray: '4 4', opacity: 0.5 }
         : onPath
