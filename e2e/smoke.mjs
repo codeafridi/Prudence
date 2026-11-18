@@ -12,7 +12,7 @@
 import fs from 'node:fs'
 import { chromium } from 'playwright'
 
-const URL = process.env.APP_URL ?? 'http://127.0.0.1:4173/'
+const APP_URL = process.env.APP_URL ?? 'http://127.0.0.1:4173/'
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH
 const SHOT = process.env.SHOT
 
@@ -32,6 +32,16 @@ const context = await browser.newContext({
   acceptDownloads: true,
 })
 const page = await context.newPage()
+
+// Privacy guard: the app must not talk to anyone but its own origin on load.
+const appOrigin = new URL(APP_URL).origin
+const offOrigin = []
+page.on('request', (request) => {
+  const target = new URL(request.url())
+  if (target.protocol === 'data:' || target.protocol === 'blob:') return
+  if (target.origin !== appOrigin) offOrigin.push(request.url())
+})
+
 await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4173' })
 
 const errors = []
@@ -42,7 +52,7 @@ page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 
 try {
   step('load')
-  await page.goto(URL, { waitUntil: 'networkidle' })
+  await page.goto(APP_URL, { waitUntil: 'networkidle' })
   await page.waitForSelector('text=Prudence')
   // A fresh browser has no stored project, so the starter chooser opens first.
   await page.getByRole('button', { name: "keep what's here" }).click()
@@ -50,6 +60,12 @@ try {
   const body = await page.textContent('body')
   assert(body.includes('multi-server'), 'demo tree renders')
   ok('shell + demo tree rendered')
+
+  step('privacy')
+  assert(offOrigin.length === 0, `third-party requests: ${offOrigin.join(', ')}`)
+  const csp = await page.getAttribute('meta[http-equiv="Content-Security-Policy"]', 'content')
+  assert(csp?.includes("script-src 'self'"), 'production build ships a CSP')
+  ok('no third-party requests, CSP present')
 
   step('nodes on canvas')
   const nodes = page.locator('.react-flow__node')
@@ -208,7 +224,7 @@ try {
   phonePage.on('console', (m) => {
     if (m.type() === 'error') phoneErrors.push(`console: ${m.text()}`)
   })
-  await phonePage.goto(URL, { waitUntil: 'networkidle' })
+  await phonePage.goto(APP_URL, { waitUntil: 'networkidle' })
   await phonePage.getByRole('button', { name: /Ship an MVP/ }).click()
   await phonePage.waitForTimeout(900)
 

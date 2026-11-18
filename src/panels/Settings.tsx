@@ -175,6 +175,8 @@ export function Settings() {
             <input
               className={field}
               type="password"
+              autoComplete="off"
+              spellCheck={false}
               value={draft.apiKey}
               onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
             />

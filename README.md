@@ -51,6 +51,29 @@ key       ollama            (anything — it isn't checked)
 The key stays in this browser. It is never written into a project, exported, or sent anywhere
 except the endpoint you configured.
 
+## Security and privacy
+
+**What leaves this machine:** one HTTPS request to the endpoint you configure, when you press Ask,
+Grill, Expand or Premortem. Nothing else — no analytics, no error reporting, no fonts or scripts
+from a CDN, no server of ours. The browser test fails the build if any request goes off-origin on
+load.
+
+**What stays local:** the project (IndexedDB), the API key (`localStorage`), the goal and every
+rationale. Share links put the tree in the URL *fragment*, which browsers never send to a server.
+
+Stated plainly, because "secure" is not a checkbox:
+
+- `localStorage` is **not encrypted**. Any script running on this origin, or anyone with access to
+  your browser profile, can read the key. Use a scoped key with a spend limit, and revoke it when
+  you're done.
+- The production build ships a Content-Security-Policy with `script-src 'self'`, so an injected
+  third-party script cannot run and exfiltrate the key. `connect-src` stays open because the model
+  endpoint is whatever you configure; that is the one place the policy must trust you.
+- A share link contains the whole tree, unencrypted. Anyone holding the link can read it. Keys are
+  never part of a project, so they cannot be part of a link.
+- Self-host the static bundle if you don't want to trust ours; serve the same CSP header at the
+  host level if you can.
+
 ## How it works
 
 ```
