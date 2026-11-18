@@ -25,6 +25,9 @@ export function Settings() {
   const close = useStore((s) => s.closeSettings)
   const providers = useStore((s) => s.project.providers)
   const activeProviderId = useStore((s) => s.activeProviderId)
+  const projectName = useStore((s) => s.project.name)
+  const setName = useStore((s) => s.setName)
+  const newProject = useStore((s) => s.newProject)
   const saveProvider = useStore((s) => s.saveProvider)
   const removeProvider = useStore((s) => s.removeProvider)
   const setActiveProvider = useStore((s) => s.setActiveProvider)
@@ -70,6 +73,26 @@ export function Settings() {
           Any OpenAI-compatible endpoint. The key stays in this browser — it is never written to the
           project or an export. Leave it blank to keep a saved key.
         </p>
+
+        <div className="mt-3 flex items-end gap-2">
+          <label className="block min-w-0 flex-1">
+            <span className="text-[10px] uppercase tracking-wider text-white/35">Project</span>
+            <input
+              className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-xs outline-none focus:border-white/30"
+              defaultValue={projectName}
+              key={projectName}
+              onBlur={(e) => setName(e.target.value)}
+            />
+          </label>
+          <button
+            onClick={() => {
+              if (confirm('Start over? This project stays in no backup — export it first.')) newProject()
+            }}
+            className="rounded border border-red-500/20 px-2 py-1.5 text-[11px] text-red-400/70 hover:border-red-500/40 hover:text-red-400"
+          >
+            Start over
+          </button>
+        </div>
 
         {providers.length > 0 && (
           <ul className="mt-3 space-y-1">

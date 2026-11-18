@@ -1,0 +1,92 @@
+# Prudence
+
+A decision canvas for building things. You are the director; the AI is a worker you summon per
+question. It never decides, never structures your project, and never runs when you're not looking.
+
+Most AI planning tools generate a plan for you. Prudence interrogates the one you're already
+holding: ask a question, get a yes/no/conditional with the consequence of each option, then make
+the call yourself and write down why.
+
+## Why
+
+- **Short by force.** Verdicts are capped at 25 words, consequences at 20. Judgment is short;
+  essays are why people stop reading advice.
+- **You keep the pen.** `choice` and `rationale` are the only fields the AI cannot write. Asking
+  is optional; deciding is the product.
+- **The win is the question you didn't ask.** Decide before expanding — the log tracks *closure
+  rate*, not node count or tokens.
+- **Advice you can argue with.** Every option comes with `p` (probability it works out) and impact
+  if it works or fails. You can override `p`. The export records both numbers.
+- **Your keys, your browser.** Local-first: IndexedDB for projects, `localStorage` for API keys.
+  No account, no server, no telemetry.
+
+## Quick start
+
+```sh
+npm install
+npm run dev          # http://localhost:5173
+```
+
+It works with **no API key**: build the tree, decide, review, export. Add a model when you want
+advice.
+
+### Adding a model
+
+Any OpenAI-compatible endpoint: OpenRouter, OpenAI, Groq, vLLM, Ollama, LM Studio.
+
+Click the model button in the header → base URL, model id, key. For a local model:
+
+```
+base URL  http://localhost:11434/v1
+model     llama3.1
+key       ollama            (anything — it isn't checked)
+```
+
+The key stays in this browser. It is never written into a project, exported, or sent anywhere
+except the endpoint you configured.
+
+## How it works
+
+```
+goal ──► decision ──► option ──► requirement ──► decision ...
+              │
+              └──► assumption (a fact the model had to guess)
+```
+
+- **Ask** — verdict: one pick, one line why, per-option consequence + probability, and the single
+  fact that would flip it. Assumptions come back as `unknowns[]`, one click from becoming a node.
+- **Grill** — the strongest case against the pick.
+- **Expand** — "what must be true for this choice to work?" Not brainstorming: requirements.
+- **Decide** — pick an option and write one line. Required. No one-click accept, by design.
+- **Park / Reopen** — park is "not now"; reopen archives the old choice into `history`.
+
+Flags are computed, never stored: `premature` (parent undecided), `stale` (answered against a
+different tree), `abandoned` (a branch you didn't take), `at risk` (backward induction says the
+choice rests on unlikely assumptions).
+
+Export produces `DECISIONS.md`: the path you took, each fork, what you rejected, and where the
+model's probability disagreed with yours.
+
+## Status
+
+Early. Working: canvas, tree editing, undo, autosave, ask + verdicts, decide/park/reopen,
+deterministic review, markdown/JSON export. Not yet: Grill and Expand in the UI (logic staged),
+collaboration, sync, mobile layout.
+
+Build in progress is documented in `AGENTS.md` (local) and the spec outside this repo.
+
+## Develop
+
+```sh
+npm run dev         # vite
+npm test            # node --test, no test runner dependency
+npm run typecheck   # tsc --noEmit
+npm run build       # typecheck + production bundle
+```
+
+Static output in `dist/` — deploy to any static host (Vercel, Netlify, Pages). No env vars, no
+server.
+
+## License
+
+MIT

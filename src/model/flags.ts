@@ -1,3 +1,4 @@
+import { effectiveP } from './ev'
 import type { Decision } from './types'
 
 /**
@@ -7,12 +8,22 @@ import type { Decision } from './types'
 export type DecisionFlags = {
   premature: boolean
   terminal: boolean
+  /** Some ancestor chose a different option than the one this branch hangs off (spec §3). */
+  abandoned: boolean
+  /** Decided, but its assumptions rate it unlikely (backward induction, spec §3). */
+  atRisk: boolean
 }
 
-export function decisionFlags(node: Decision, parent?: Decision): DecisionFlags {
+export function decisionFlags(
+  node: Decision,
+  parent?: Decision,
+  abandoned = false,
+): DecisionFlags {
   return {
     premature: parent !== undefined && parent.state !== 'decided',
     terminal: node.state === 'decided' && node.children.length === 0,
+    abandoned,
+    atRisk: node.state === 'decided' && effectiveP(node) < 0.5,
   }
 }
 

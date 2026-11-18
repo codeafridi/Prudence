@@ -10,7 +10,7 @@ const dot: Record<string, string> = {
 }
 
 export function DecisionNodeView({ data, selected }: NodeProps<DecisionNode>) {
-  const { decision, flags, explored, recommended, stale } = data
+  const { decision, flags, explored, recommended, stale, onPath } = data
   const count = decision.options.length
 
   return (
@@ -18,19 +18,37 @@ export function DecisionNodeView({ data, selected }: NodeProps<DecisionNode>) {
       style={{ width: NODE_W }}
       className={[
         'rounded-lg border bg-[#131317] px-3 py-2 text-left shadow-lg',
-        selected ? 'border-white/40' : 'border-white/10',
+        selected ? 'border-white/40' : flags.abandoned ? 'border-white/5' : 'border-white/10',
         flags.premature ? 'border-dashed' : '',
+        onPath && !flags.abandoned ? 'shadow-[0_0_0_1px_rgba(52,211,153,0.35)]' : '',
       ].join(' ')}
     >
       <div className="flex items-start gap-2">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot[decision.state]}`} />
         <p className="line-clamp-2 text-[13px] leading-snug text-white/90">{decision.question}</p>
-        {stale && <span className="ml-auto text-[10px] text-amber-400" title="answered against a different tree">●</span>}
+        {stale && (
+          <span className="ml-auto text-[10px] text-amber-400" title="answered against a different tree">
+            ●
+          </span>
+        )}
       </div>
+
+      {decision.state === 'decided' && decision.choice && (
+        <p className="mt-1 truncate text-[11px] text-emerald-300/80" title={decision.choice}>
+          → {decision.choice}
+        </p>
+      )}
 
       <div className="mt-2 flex items-center justify-between text-[10px] text-white/35">
         <span>{explored}</span>
-        <span>{flags.terminal ? '✓' : decision.state}</span>
+        <span className="flex items-center gap-1">
+          {flags.atRisk && (
+            <span className="text-red-400" title="rests on unlikely assumptions">
+              at risk
+            </span>
+          )}
+          {flags.terminal ? '✓' : decision.state}
+        </span>
       </div>
 
       {/* one source handle per option — the fork IS the decision (§6) */}

@@ -45,7 +45,21 @@ type Store = {
   setActiveProvider: (id: string) => void
   ask: (nodeId: string) => Promise<void>
 
+  /** Human-only verbs. Nothing in this file may be reachable from the AI path. */
+  decide: (id: string, choice: string, rationale: string) => void
+  park: (id: string) => void
+  unpark: (id: string) => void
+  reopen: (id: string) => void
+  adjustP: (id: string, p: number | undefined) => void
+  promoteUnknown: (id: string, text: string) => void
+
+  panel: 'node' | 'review'
+  setPanel: (panel: 'node' | 'review') => void
+
   rename: (id: string, question: string) => void
+  setGoal: (goal: string) => void
+  setName: (name: string) => void
+  newProject: () => void
   addOption: (id: string, option: string) => void
   removeOption: (id: string, option: string) => void
   createChild: (parentId: string, via: Via) => string
@@ -85,6 +99,7 @@ export const useStore = create<Store>((set, get) => {
     settingsOpen: false,
     askingId: null,
     askError: null,
+    panel: 'node',
 
     hydrate: async () => {
       const stored = await loadProject()
@@ -93,6 +108,32 @@ export const useStore = create<Store>((set, get) => {
     },
 
     select: (id) => set({ selectedId: id }),
+
+    setGoal: (goal) => {
+      const trimmed = goal.trim()
+      if (trimmed === get().project.goal) return
+      commitProject({ ...get().project, goal: trimmed })
+    },
+
+    setName: (name) => {
+      const trimmed = name.trim()
+      if (!trimmed || trimmed === get().project.name) return
+      commitProject({ ...get().project, name: trimmed })
+    },
+
+    newProject: () => {
+      const root = newDecision(undefined, 'What is the first decision?')
+      commitProject({
+        id: crypto.randomUUID(),
+        name: 'Untitled project',
+        goal: '',
+        root,
+        providers: get().project.providers,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+      set({ selectedId: root.id })
+    },
 
     rename: (id, question) => {
       const trimmed = question.trim()
@@ -191,6 +232,92 @@ export const useStore = create<Store>((set, get) => {
     },
 
     setActiveProvider: (id) => set({ activeProviderId: id }),
+
+    decide: (id, choice, rationale) => {
+      const node = findNode(get().project.root, id)
+      const trimmed = rationale.trim()
+      if (!node || !node.options.includes(choice) || !trimmed) return
+
+      const previous =
+        node.state === 'decided' && node.choice && node.rationale
+          ? {
+              choice: node.choice,
+              rationale: node.rationale,
+              pOverride: node.pOverride,
+              at: node.decidedAt ?? Date.now(),
+            }
+          : undefined
+
+      commit(
+        updateNode(get().project.root, id, (n) => ({
+          ...n,
+          state: 'decided',
+          choice,
+          rationale: trimmed,
+          decidedAt: Date.now(),
+          history: previous ? [previous, ...n.history] : n.history,
+        })),
+      )
+    },
+
+    park: (id) => {
+      commit(
+        updateNode(get().project.root, id, (n) =>
+          n.state === 'decided' ? n : { ...n, state: 'parked' },
+        ),
+      )
+    },
+
+    unpark: (id) => {
+      commit(
+        updateNode(get().project.root, id, (n) =>
+          n.state === 'parked' ? { ...n, state: n.verdicts.length > 0 ? 'asked' : 'open' } : n,
+        ),
+      )
+    },
+
+    reopen: (id) => {
+      commit(
+        updateNode(get().project.root, id, (n) => {
+          if (n.state !== 'decided' || !n.choice) return n
+          return {
+            ...n,
+            state: n.verdicts.length > 0 ? 'asked' : 'open',
+            history: [
+              {
+                choice: n.choice,
+                rationale: n.rationale ?? '',
+                pOverride: n.pOverride,
+                at: n.decidedAt ?? Date.now(),
+              },
+              ...n.history,
+            ],
+            choice: undefined,
+            rationale: undefined,
+            pOverride: undefined,
+            decidedAt: undefined,
+          }
+        }),
+      )
+    },
+
+    adjustP: (id, p) => {
+      commit(
+        updateNode(get().project.root, id, (n) => ({
+          ...n,
+          pOverride: p === undefined ? undefined : Math.min(1, Math.max(0, p)),
+        })),
+      )
+    },
+
+    promoteUnknown: (id, text) => {
+      const node = findNode(get().project.root, id)
+      if (!node) return
+      const child = newDecision({ kind: 'assumption' }, text)
+      commit(addChild(get().project.root, id, child), child.id)
+    },
+
+    setPanel: (panel) => set({ panel }),
 
     ask: async (nodeId) => {
       const s = get()
