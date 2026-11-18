@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parseVerdict } from './schema.ts'
+import { parseExpand, parseGrill, parseVerdict } from './schema.ts'
 
 const valid = {
   pick: 'a',
@@ -59,4 +59,30 @@ test('unknowns defaults to an empty list', () => {
   const result = parseVerdict(['a', 'b'], withoutUnknowns)
   assert.equal(result.ok, true)
   if (result.ok) assert.deepEqual(result.verdict.unknowns, [])
+})
+
+test('expand questions are capped, deduped and word-limited', () => {
+  const long = Array.from({ length: 30 }, (_, i) => `q${i}`).join(' ')
+  const result = parseExpand({
+    questions: ['does this need auth?', 'DOES THIS NEED AUTH?', long, 'third', 'fourth'],
+  })
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+  assert.equal(result.value.questions.length, 3, 'capped at three')
+  assert.equal(new Set(result.value.questions.map((q) => q.toLowerCase())).size, 3, 'deduped')
+  assert.equal(result.value.questions[1].split(/\s+/).length, 20, 'long question is capped')
+})
+
+test('expand rejects an empty list', () => {
+  assert.equal(parseExpand({ questions: [] }).ok, false)
+  assert.equal(parseExpand({}).ok, false)
+})
+
+test('grill is trimmed and keeps both halves', () => {
+  const long = Array.from({ length: 60 }, (_, i) => `w${i}`).join(' ')
+  const result = parseGrill({ why: long, flipIf: 'a weekend outage' })
+  assert.equal(result.ok, true)
+  if (!result.ok) return
+  assert.ok(result.value.why.endsWith('…'))
+  assert.equal(result.value.flipIf, 'a weekend outage')
 })

@@ -42,12 +42,7 @@ export type ParseResult = { ok: true; verdict: ParsedVerdict } | { ok: false; er
 export function parseVerdict(options: string[], input: unknown): ParseResult {
   const parsed = verdictBodySchema.safeParse(input)
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues
-        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-        .join('; '),
-    }
+    return { ok: false, error: formatIssues(parsed.error.issues) }
   }
 
   const body = parsed.data
@@ -80,6 +75,62 @@ function capWords(text: string, max: number): string {
   return `${words.slice(0, max).join(' ')}…`
 }
 
+export const MAX_GRILL_WORDS = 40
+export const MAX_QUESTION_WORDS = 20
+export const MAX_EXPAND_QUESTIONS = 3
+
+const grillBodySchema = z.object({
+  why: z.string().min(1),
+  flipIf: z.string().min(1),
+})
+
+const expandBodySchema = z.object({
+  questions: z.array(z.string().min(1)).min(1).max(MAX_EXPAND_QUESTIONS * 2),
+})
+
+export type ParsedGrill = { why: string; flipIf: string }
+
+/** Strongest case against the pick — spec §4 "Grill". Never rewrites the verdict. */
+export function parseGrill(
+  input: unknown,
+): { ok: true; value: ParsedGrill } | { ok: false; error: string } {
+  const parsed = grillBodySchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: formatIssues(parsed.error.issues) }
+  return {
+    ok: true,
+    value: {
+      why: capWords(parsed.data.why, MAX_GRILL_WORDS),
+      flipIf: capWords(parsed.data.flipIf, MAX_WHY_WORDS),
+    },
+  }
+}
+
+/** Requirements of the chosen option — spec §5.2 "Expand". Questions only, no answers. */
+export function parseExpand(
+  input: unknown,
+): { ok: true; value: { questions: string[] } } | { ok: false; error: string } {
+  const parsed = expandBodySchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: formatIssues(parsed.error.issues) }
+
+  const seen = new Set<string>()
+  const questions: string[] = []
+  for (const raw of parsed.data.questions) {
+    const question = capWords(raw, MAX_QUESTION_WORDS)
+    const key = question.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    questions.push(question)
+    if (questions.length === MAX_EXPAND_QUESTIONS) break
+  }
+
+  if (questions.length === 0) return { ok: false, error: 'no usable questions' }
+  return { ok: true, value: { questions } }
+}
+
+function formatIssues(issues: { path: PropertyKey[]; message: string }[]): string {
+  return issues.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`).join('; ')
+}
+
 /** Sent as `response_format.json_schema` — OpenAI strict mode requires every field listed. */
 export const verdictJsonSchema = {
   type: 'object',
@@ -110,6 +161,29 @@ export const verdictJsonSchema = {
       type: 'array',
       items: { type: 'string' },
       description: 'facts the model had to assume; not restatements of the question',
+    },
+  },
+} as const
+
+export const grillJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['why', 'flipIf'],
+  properties: {
+    why: { type: 'string', description: 'strongest case against the pick, at most 40 words' },
+    flipIf: { type: 'string', description: 'the fact that would make the pick wrong' },
+  },
+} as const
+
+export const expandJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['questions'],
+  properties: {
+    questions: {
+      type: 'array',
+      maxItems: 3,
+      items: { type: 'string', description: 'a decision this choice requires, at most 20 words' },
     },
   },
 } as const

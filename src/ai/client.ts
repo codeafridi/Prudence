@@ -1,15 +1,20 @@
 import { effectiveP } from '../model/ev.ts'
-import type { Decision } from '../model/types.ts'
 import {
+  expandJsonSchema,
+  grillJsonSchema,
+  parseExpand,
+  parseGrill,
   parseVerdict,
   verdictJsonSchema,
+  type ParsedGrill,
   type ParsedVerdict,
 } from '../model/schema.ts'
+import type { Decision } from '../model/types.ts'
 
 /**
  * OpenAI-compatible adapter — spec §5.1. One code path covers OpenRouter, OpenAI, Groq, vLLM,
  * Ollama and LM Studio. The fallback ladder exists because providers disagree about structured
- * output; the Zod parse (§5.4) is the only thing that decides whether a verdict is usable.
+ * output; the Zod parse (§5.4) is the only thing that decides whether an answer is usable.
  */
 
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
@@ -43,41 +48,93 @@ export class ProviderError extends Error {
   }
 }
 
-const INLINE_SCHEMA =
-  'Return only a JSON object: {"pick":string,"why":string,"perOption":' +
-  '[{"option":string,"outcome":string,"cost":"time|money|complexity|none",' +
-  '"reversible":boolean,"p":number,"ifWorks":number,"ifFails":number}],' +
-  '"flipIf":string,"unknowns":string[]}'
+export function askVerdict(input: AskInput): Promise<AskResult> {
+  return requestJson({
+    provider: input.provider,
+    messages: input.messages,
+    signal: input.signal,
+    schema: verdictJsonSchema,
+    inline:
+      'Return only a JSON object: {"pick":string,"why":string,"perOption":' +
+      '[{"option":string,"outcome":string,"cost":"time|money|complexity|none",' +
+      '"reversible":boolean,"p":number,"ifWorks":number,"ifFails":number}],' +
+      '"flipIf":string,"unknowns":string[]}',
+    parse: (raw) => {
+      const parsed = parseVerdict(input.options, raw)
+      return parsed.ok ? { ok: true, value: parsed.verdict } : parsed
+    },
+  }).then((result) => ({ verdict: result.value, model: result.model, tokens: result.tokens }))
+}
 
-type Format = Record<string, unknown> | undefined
+export function askGrill(input: {
+  provider: ProviderCredentials
+  messages: ChatMessage[]
+  signal?: AbortSignal
+}): Promise<{ counter: ParsedGrill; model: string; tokens: { in: number; out: number } }> {
+  return requestJson({
+    provider: input.provider,
+    messages: input.messages,
+    signal: input.signal,
+    schema: grillJsonSchema,
+    inline: 'Return only a JSON object: {"why":string (max 40 words),"flipIf":string}',
+    parse: parseGrill,
+  }).then((result) => ({ counter: result.value, model: result.model, tokens: result.tokens }))
+}
 
-function attempts(messages: ChatMessage[]): { messages: ChatMessage[]; format: Format }[] {
+export function askExpand(input: {
+  provider: ProviderCredentials
+  messages: ChatMessage[]
+  signal?: AbortSignal
+}): Promise<{ questions: string[]; model: string; tokens: { in: number; out: number } }> {
+  return requestJson({
+    provider: input.provider,
+    messages: input.messages,
+    signal: input.signal,
+    schema: expandJsonSchema,
+    inline: 'Return only a JSON object: {"questions":string[]} — at most 3 questions, no answers.',
+    parse: parseExpand,
+  }).then((result) => ({ questions: result.value.questions, model: result.model, tokens: result.tokens }))
+}
+
+type ParseOutcome<T> = { ok: true; value: T } | { ok: false; error: string }
+
+type JsonTask<T> = {
+  provider: ProviderCredentials
+  messages: ChatMessage[]
+  schema: unknown
+  inline: string
+  parse: (input: unknown) => ParseOutcome<T>
+  signal?: AbortSignal
+}
+
+type Attempt = { messages: ChatMessage[]; format: Record<string, unknown> | undefined }
+
+function attempts(task: JsonTask<unknown>): Attempt[] {
   return [
     {
-      messages,
-      format: { type: 'json_schema', json_schema: { name: 'verdict', strict: true, schema: verdictJsonSchema } },
+      messages: task.messages,
+      format: { type: 'json_schema', json_schema: { name: 'answer', strict: true, schema: task.schema } },
     },
-    { messages, format: { type: 'json_object' } },
-    { messages: [...messages, { role: 'user', content: INLINE_SCHEMA }], format: undefined },
+    { messages: task.messages, format: { type: 'json_object' } },
+    { messages: [...task.messages, { role: 'user', content: task.inline }], format: undefined },
   ]
 }
 
-export async function askVerdict(input: AskInput): Promise<AskResult> {
-  const { provider, messages, options, signal } = input
+async function requestJson<T>(
+  task: JsonTask<T>,
+): Promise<{ value: T; model: string; tokens: { in: number; out: number } }> {
   let lastError = 'no attempt was made'
   let invalid: string | undefined
 
-  for (const attempt of attempts(messages)) {
+  for (const attempt of attempts(task)) {
     try {
-      const response = await complete(provider, attempt.messages, attempt.format, signal)
-      const parsed = parseVerdict(options, parseJson(response.content))
-      if (parsed.ok) {
-        return { verdict: parsed.verdict, model: provider.model, tokens: response.tokens }
-      }
+      const response = await complete(task.provider, attempt.messages, attempt.format, task.signal)
+      const parsed = task.parse(parseJson(response.content))
+      if (parsed.ok) return { value: parsed.value, model: task.provider.model, tokens: response.tokens }
       lastError = parsed.error
       invalid = response.content
     } catch (error) {
-      // A bad key or a missing model will not be fixed by trying a different response format.
+      // A bad key or a missing model will not be fixed by a different response format.
       if (error instanceof ProviderError && (error.status === 401 || error.status === 403)) throw error
       lastError = error instanceof Error ? error.message : String(error)
     }
@@ -86,23 +143,23 @@ export async function askVerdict(input: AskInput): Promise<AskResult> {
   // One repair turn: hand the model its own invalid output plus the reason it was rejected.
   if (invalid) {
     const repaired = await complete(
-      provider,
+      task.provider,
       [
-        ...messages,
+        ...task.messages,
         { role: 'assistant', content: invalid },
         { role: 'user', content: `That JSON was invalid: ${lastError}. Return only the corrected JSON object.` },
       ],
       undefined,
-      signal,
+      task.signal,
     )
-    const parsed = parseVerdict(options, parseJson(repaired.content))
+    const parsed = task.parse(parseJson(repaired.content))
     if (parsed.ok) {
-      return { verdict: parsed.verdict, model: provider.model, tokens: repaired.tokens }
+      return { value: parsed.value, model: task.provider.model, tokens: repaired.tokens }
     }
     lastError = parsed.error
   }
 
-  throw new Error(`No usable verdict from ${provider.model}: ${lastError}`)
+  throw new Error(`No usable answer from ${task.provider.model}: ${lastError}`)
 }
 
 type CompleteResult = { content: string; tokens: { in: number; out: number } }
@@ -115,7 +172,7 @@ type WireResponse = {
 async function complete(
   provider: ProviderCredentials,
   messages: ChatMessage[],
-  format: Format,
+  format: Record<string, unknown> | undefined,
   signal?: AbortSignal,
 ): Promise<CompleteResult> {
   const url = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`

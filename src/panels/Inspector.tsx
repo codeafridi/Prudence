@@ -71,6 +71,8 @@ function VerdictSection({ node }: { node: Decision }) {
   const askError = useStore((s) => s.askError)
   const openSettings = useStore((s) => s.openSettings)
   const promoteUnknown = useStore((s) => s.promoteUnknown)
+  const grill = useStore((s) => s.grill)
+  const grilling = useStore((s) => s.grillingId) === node.id
   const hasProvider = project.providers.length > 0
   const latest = node.verdicts[0]
 
@@ -102,6 +104,8 @@ function VerdictSection({ node }: { node: Decision }) {
         <VerdictCard
           verdict={latest}
           stale={!isFresh(project, node)}
+          grilling={grilling}
+          onGrill={() => void grill(node.id)}
           onPromote={(text) => promoteUnknown(node.id, text)}
         />
       ) : (
@@ -116,10 +120,14 @@ function VerdictSection({ node }: { node: Decision }) {
 function VerdictCard({
   verdict,
   stale,
+  grilling,
+  onGrill,
   onPromote,
 }: {
   verdict: Verdict
   stale: boolean
+  grilling: boolean
+  onGrill: () => void
   onPromote: (text: string) => void
 }) {
   return (
@@ -148,6 +156,26 @@ function VerdictCard({
         <span className="text-white/30">flip if </span>
         {verdict.flipIf}
       </p>
+
+      {verdict.counter ? (
+        <div className="rounded border border-red-400/15 bg-red-400/5 px-1.5 py-1">
+          <p className="text-[10px] uppercase tracking-wider text-red-400/60">against</p>
+          <p className="text-[11px] leading-snug text-white/60">{verdict.counter.why}</p>
+          <p className="mt-1 text-[11px] leading-snug text-white/35">
+            <span className="text-white/25">wrong if </span>
+            {verdict.counter.flipIf}
+          </p>
+        </div>
+      ) : (
+        <button
+          onClick={onGrill}
+          disabled={grilling}
+          className="w-full rounded border border-red-400/20 px-2 py-1 text-[11px] text-red-300/70 hover:border-red-400/40 hover:text-red-300 disabled:opacity-40"
+          title="Ask for the strongest case against this pick"
+        >
+          {grilling ? 'arguing…' : 'grill this pick'}
+        </button>
+      )}
 
       {verdict.unknowns.length > 0 && (
         <ul className="space-y-1 border-t border-white/5 pt-1">
@@ -179,6 +207,8 @@ function DecisionSection({ node }: { node: Decision }) {
   const park = useStore((s) => s.park)
   const unpark = useStore((s) => s.unpark)
   const adjustP = useStore((s) => s.adjustP)
+  const expand = useStore((s) => s.expand)
+  const expanding = useStore((s) => s.expandingId) === node.id
 
   const [choice, setChoice] = useState(node.choice ?? '')
   const [rationale, setRationale] = useState(node.rationale ?? '')
@@ -251,6 +281,17 @@ function DecisionSection({ node }: { node: Decision }) {
           </button>
         )}
       </div>
+
+      {decided && (
+        <button
+          onClick={() => void expand(node.id)}
+          disabled={expanding}
+          className="w-full rounded border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:border-white/25 hover:text-white disabled:opacity-40"
+          title="Show what this choice requires — questions only, no answers"
+        >
+          {expanding ? 'working out what it requires…' : 'what does this require?'}
+        </button>
+      )}
 
       {decided && (
         <div className="rounded border border-white/5 bg-black/20 p-2">
