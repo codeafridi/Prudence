@@ -6,6 +6,7 @@ question. It never decides, never structures your project, and never runs when y
 **Try it: https://codeafridi.github.io/Prudence/** — no account, no key needed to use the canvas.
 
 ![Prudence decision canvas](docs/screenshot.png)
+![Prudence on a phone](docs/screenshot-mobile.png)
 
 Most AI planning tools generate a plan for you. Prudence interrogates the one you're already
 holding: ask a question, get a yes/no/conditional with the consequence of each option, then make
