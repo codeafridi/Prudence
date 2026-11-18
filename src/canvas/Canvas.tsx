@@ -28,6 +28,8 @@ function Flow() {
   const project = useStore((s) => s.project)
   const hydrated = useStore((s) => s.hydrated)
   const select = useStore((s) => s.select)
+  const setSheet = useStore((s) => s.setSheet)
+  const sheetOpen = useStore((s) => s.sheetOpen)
   const setPos = useStore((s) => s.setPos)
   const focusRequest = useStore((s) => s.focusRequest)
   const clearFocus = useStore((s) => s.clearFocus)
@@ -47,10 +49,22 @@ function Flow() {
   // `shortcut: refit on node-count or hydration change only; a rename does not reframe the view.`
   useEffect(() => {
     if (!nodesInitialized) return
+    // `sheetOpen` changes the canvas height on a phone — refit so nothing hides behind the sheet.
     // v13 takes padding in pixels; a fraction is read as ~0 and the graph overflows the viewport.
-    const timer = setTimeout(() => fitView({ padding: 60, duration: 200 }), 40)
+    // On a phone, fitting the whole tree makes every card unreadable. Keep a floor on the zoom
+    // and let the user pan, rather than shrinking to a postage stamp.
+    const compact = window.innerWidth < 768
+    const timer = setTimeout(
+      () =>
+        fitView({
+          padding: compact ? 30 : 60,
+          minZoom: compact ? 0.7 : 0.1,
+          duration: 200,
+        }),
+      40,
+    )
     return () => clearTimeout(timer)
-  }, [count, hydrated, nodesInitialized, fitView])
+  }, [count, hydrated, nodesInitialized, sheetOpen, fitView])
 
   // A finder hit or outline click asks the canvas to centre that node.
   useEffect(() => {
@@ -62,7 +76,10 @@ function Flow() {
     return () => clearTimeout(timer)
   }, [focusRequest, fitView, clearFocus])
 
-  const onNodeClick: NodeMouseHandler = (_, node) => select(node.id)
+  const onNodeClick: NodeMouseHandler = (_, node) => {
+    select(node.id)
+    setSheet(true)
+  }
 
   return (
     <ReactFlow

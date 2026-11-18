@@ -195,6 +195,66 @@ try {
   await sharedContext.close()
   ok('share link opens the same tree with no server')
 
+  step('phone layout')
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2,
+  })
+  const phonePage = await phone.newPage()
+  const phoneErrors = []
+  phonePage.on('pageerror', (e) => phoneErrors.push(e.message))
+  phonePage.on('console', (m) => {
+    if (m.type() === 'error') phoneErrors.push(`console: ${m.text()}`)
+  })
+  await phonePage.goto(URL, { waitUntil: 'networkidle' })
+  await phonePage.getByRole('button', { name: /Ship an MVP/ }).click()
+  await phonePage.waitForTimeout(900)
+
+  const noSideScroll = await phonePage.evaluate(
+    () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+  )
+  assert(noSideScroll, 'phone layout must not scroll sideways')
+
+  // Phones default to the outline: readable without pinching.
+  const rows = phonePage.getByRole('button', { name: /Where does the data actually live/ })
+  assert((await rows.count()) > 0, 'outline is the phone default')
+
+  await phonePage.locator('.react-flow').count()
+  const rowCount = await phonePage.locator('div[style*="padding-left"]').count()
+  assert(rowCount > 0, 'outline rows render')
+
+  // Tapping a row opens the bottom sheet with the inspector.
+  await rows.first().click()
+  await phonePage.waitForTimeout(600)
+  assert((await phonePage.locator('text=Options').count()) > 0, 'bottom sheet opens on tap')
+
+  const sheetTop = await phonePage
+    .locator('text=Options')
+    .first()
+    .evaluate((el) => el.getBoundingClientRect().top)
+  assert(sheetTop > 844 * 0.35, `sheet should sit in the lower half, top at ${sheetTop}`)
+
+  const rowAboveSheet = await phonePage
+    .locator('div[style*="padding-left"]')
+    .evaluateAll((els, limit) => els.some((el) => el.getBoundingClientRect().bottom < limit - 10), sheetTop)
+  assert(rowAboveSheet, 'the tree stays visible above the sheet')
+
+  // The canvas is still reachable, and its nodes stay legible rather than shrinking to nothing.
+  await phonePage.getByRole('button', { name: 'canvas', exact: true }).click()
+  await phonePage.waitForTimeout(900)
+  const nodeWidth = await phonePage
+    .locator('.react-flow__node')
+    .first()
+    .evaluate((el) => el.getBoundingClientRect().width)
+  assert(nodeWidth > 150, `nodes should stay readable on a phone, width ${nodeWidth}`)
+
+  if (process.env.MOBILE_SHOT) await phonePage.screenshot({ path: process.env.MOBILE_SHOT })
+  assert(phoneErrors.length === 0, phoneErrors.join('\n'))
+  await phone.close()
+  ok('phone: no sideways scroll, outline default, sheet opens, canvas stays legible')
+
   step('console')
   assert(errors.length === 0, errors.join('\n'))
   ok('no console errors')

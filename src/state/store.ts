@@ -75,6 +75,9 @@ type Store = {
   setView: (view: 'canvas' | 'outline') => void
   finderOpen: boolean
   setFinder: (open: boolean) => void
+  /** Phone-only bottom sheet. Opened by a tap, never by programmatic selection. */
+  sheetOpen: boolean
+  setSheet: (open: boolean) => void
   examplesOpen: boolean
   setExamples: (open: boolean) => void
   loadSeed: (seed: Seed) => void
@@ -145,8 +148,10 @@ export const useStore = create<Store>((set, get) => {
     expandingId: null,
     premortemId: null,
     panel: 'node',
-    view: 'canvas',
+    // A phone is a reading device: the outline is legible where a fitted canvas is a thumbnail.
+    view: typeof window !== 'undefined' && window.innerWidth < 768 ? 'outline' : 'canvas',
     finderOpen: false,
+    sheetOpen: false,
     examplesOpen: false,
     fromShared: false,
     focusRequest: null,
@@ -402,6 +407,8 @@ export const useStore = create<Store>((set, get) => {
 
     setFinder: (open) => set({ finderOpen: open }),
 
+    setSheet: (open) => set({ sheetOpen: open }),
+
     setExamples: (open) => set({ examplesOpen: open }),
 
     dismissShared: () => set({ fromShared: false }),
@@ -412,7 +419,8 @@ export const useStore = create<Store>((set, get) => {
       set({ selectedId: project.root.id, examplesOpen: false, fromShared: false })
     },
 
-    requestFocus: (id) => set({ selectedId: id, panel: 'node', finderOpen: false, focusRequest: id }),
+    requestFocus: (id) =>
+      set({ selectedId: id, panel: 'node', finderOpen: false, focusRequest: id, sheetOpen: true }),
 
     clearFocus: () => set({ focusRequest: null }),
 

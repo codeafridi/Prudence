@@ -74,7 +74,8 @@ different tree), `abandoned` (a branch you didn't take), `at risk` (backward ind
 choice rests on unlikely assumptions).
 
 Two ways to read the same tree: the canvas, and an **outline** list that survives trees larger than
-one screen. `Cmd/Ctrl+K` jumps to any node by question or by the option you chose.
+one screen. On a phone the outline is the default, the inspector becomes a bottom sheet, and the
+canvas keeps a minimum zoom so cards stay readable instead of shrinking to a thumbnail. `Cmd/Ctrl+K` jumps to any node by question or by the option you chose.
 
 **Share** produces a link with the whole tree compressed into the URL hash — no server, no account,
 and the hash is never sent over the network. The recipient gets the same log, uneditable history
