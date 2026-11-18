@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { download, slugify } from '../lib/download'
+import { shareUrl } from '../lib/share'
 import { exportJson, exportMarkdown } from '../lib/export'
 import { lint, type Finding } from '../model/lint'
 import { useStore } from '../state/store'
@@ -23,6 +24,18 @@ export function Review() {
   const select = useStore((s) => s.select)
   const setPanel = useStore((s) => s.setPanel)
   const findings = useMemo(() => lint(project), [project])
+  const [share, setShare] = useState<'idle' | 'copied' | 'error'>('idle')
+
+  const copyShare = async () => {
+    try {
+      const url = await shareUrl(project, window.location)
+      await navigator.clipboard.writeText(url)
+      setShare('copied')
+      setTimeout(() => setShare('idle'), 2000)
+    } catch {
+      setShare('error')
+    }
+  }
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden text-[12px]">
@@ -71,8 +84,19 @@ export function Review() {
         >
           Project (.json)
         </button>
+        <button
+          onClick={() => void copyShare()}
+          className="w-full rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:border-white/25 hover:text-white"
+          title="A read-only copy of this tree, encoded in the URL — no server involved"
+        >
+          {share === 'copied'
+            ? 'link copied'
+            : share === 'error'
+              ? 'clipboard blocked — use the file'
+              : 'Copy share link'}
+        </button>
         <p className="pt-1 text-[10px] leading-snug text-white/20">
-          Keys never leave this browser, so neither file can contain one.
+          Keys never leave this browser, so neither the file nor the link can contain one.
         </p>
       </div>
     </div>

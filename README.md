@@ -31,8 +31,9 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-It works with **no API key**: build the tree, decide, review, export. Add a model when you want
-advice.
+It works with **no API key**: build the tree, decide, review, export. On first run you get three
+half-decided starter trees — including a parked branch and one you didn't take — so the shape is
+visible before you type anything. Add a model when you want advice.
 
 ### Adding a model
 
@@ -75,6 +76,10 @@ choice rests on unlikely assumptions).
 Two ways to read the same tree: the canvas, and an **outline** list that survives trees larger than
 one screen. `Cmd/Ctrl+K` jumps to any node by question or by the option you chose.
 
+**Share** produces a link with the whole tree compressed into the URL hash — no server, no account,
+and the hash is never sent over the network. The recipient gets the same log, uneditable history
+intact, and can fork it into their own browser.
+
 Export produces `DECISIONS.md`: the path you took, each fork, what you rejected, and where the
 model's probability disagreed with yours.
 
@@ -83,7 +88,8 @@ model's probability disagreed with yours.
 Early, but the whole loop works: canvas, tree editing, undo, autosave, ask + verdicts, grill,
 expand, premortem, decide/park/reopen, probability override, scheduled retrospectives,
 deterministic review, markdown/JSON export.
-Not yet: collaboration, sync, mobile layout.
+Not yet: mobile layout, real-time collaboration (that needs a server, which is a different product
+decision).
 
 Build in progress is documented in `AGENTS.md` (local) and the spec outside this repo.
 

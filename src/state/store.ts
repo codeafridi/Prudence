@@ -5,6 +5,8 @@ import { demoProject } from '../demo'
 import { getKey, setKey } from '../lib/keys'
 import { loadProject, scheduleSave } from '../lib/storage'
 import { contextHash } from '../model/hash'
+import { readShareHash, decodeProject } from '../lib/share'
+import { seedToProject, type Seed } from '../seeds'
 import {
   addChild,
   canRemoveOption,
@@ -73,6 +75,11 @@ type Store = {
   setView: (view: 'canvas' | 'outline') => void
   finderOpen: boolean
   setFinder: (open: boolean) => void
+  examplesOpen: boolean
+  setExamples: (open: boolean) => void
+  loadSeed: (seed: Seed) => void
+  fromShared: boolean
+  dismissShared: () => void
   /** Set once when something asks the canvas to centre a node; cleared by the canvas. */
   focusRequest: string | null
   requestFocus: (id: string) => void
@@ -140,12 +147,43 @@ export const useStore = create<Store>((set, get) => {
     panel: 'node',
     view: 'canvas',
     finderOpen: false,
+    examplesOpen: false,
+    fromShared: false,
     focusRequest: null,
 
     hydrate: async () => {
       const stored = await loadProject()
-      if (stored) set({ project: stored, selectedId: stored.root.id, past: [], future: [] })
-      set({ hydrated: true })
+      const sharedCode = readShareHash(window.location.hash)
+
+      if (sharedCode) {
+        const shared = await decodeProject(sharedCode)
+        const replace =
+          shared !== undefined &&
+          (stored === undefined ||
+            confirm('Open the shared decision log? This replaces the project in this browser — export yours first if you need it.'))
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+
+        if (shared && replace) {
+          scheduleSave(shared)
+          set({
+            project: shared,
+            selectedId: shared.root.id,
+            past: [],
+            future: [],
+            hydrated: true,
+            fromShared: true,
+          })
+          return
+        }
+      }
+
+      if (stored) {
+        set({ project: stored, selectedId: stored.root.id, past: [], future: [], hydrated: true })
+        return
+      }
+
+      // First run: offer a starting tree instead of a blank one.
+      set({ hydrated: true, examplesOpen: true })
     },
 
     select: (id) => set({ selectedId: id }),
@@ -363,6 +401,16 @@ export const useStore = create<Store>((set, get) => {
     setView: (view) => set({ view }),
 
     setFinder: (open) => set({ finderOpen: open }),
+
+    setExamples: (open) => set({ examplesOpen: open }),
+
+    dismissShared: () => set({ fromShared: false }),
+
+    loadSeed: (seed) => {
+      const project = seedToProject(seed)
+      commitProject(project)
+      set({ selectedId: project.root.id, examplesOpen: false, fromShared: false })
+    },
 
     requestFocus: (id) => set({ selectedId: id, panel: 'node', finderOpen: false, focusRequest: id }),
 

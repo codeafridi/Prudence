@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Canvas } from './canvas/Canvas'
 import { lint } from './model/lint'
 import { countNodes } from './model/ops'
+import { Examples } from './panels/Examples'
 import { Finder } from './panels/Finder'
 import { Inspector } from './panels/Inspector'
 import { Outline } from './panels/Outline'
@@ -24,6 +25,9 @@ export function App() {
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
   const setFinder = useStore((s) => s.setFinder)
+  const setExamples = useStore((s) => s.setExamples)
+  const fromShared = useStore((s) => s.fromShared)
+  const dismissShared = useStore((s) => s.dismissShared)
 
   const provider =
     useStore((s) => s.project.providers.find((p) => p.id === s.activeProviderId)) ??
@@ -74,6 +78,13 @@ export function App() {
           ))}
         </div>
         <button
+          onClick={() => setExamples(true)}
+          className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:border-white/25 hover:text-white"
+          title="Load a starting tree"
+        >
+          examples
+        </button>
+        <button
           onClick={() => setFinder(true)}
           className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:border-white/25 hover:text-white"
           title="Find a decision (Ctrl/Cmd+K)"
@@ -110,6 +121,15 @@ export function App() {
         </button>
       </header>
 
+      {fromShared && (
+        <div className="flex items-center gap-2 border-b border-sky-400/20 bg-sky-400/5 px-4 py-1.5 text-[11px] text-sky-200/70">
+          <span>Opened from a shared link. Edits stay in this browser — nothing is uploaded.</span>
+          <button onClick={dismissShared} className="ml-auto text-sky-200/40 hover:text-sky-100">
+            dismiss
+          </button>
+        </div>
+      )}
+
       <main className="flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">
           {view === 'canvas' ? <Canvas /> : <Outline />}
@@ -139,6 +159,7 @@ export function App() {
       </main>
 
       <Settings />
+      <Examples />
       <Finder />
     </div>
   )

@@ -32,6 +32,7 @@ const context = await browser.newContext({
   acceptDownloads: true,
 })
 const page = await context.newPage()
+await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4173' })
 
 const errors = []
 page.on('console', (m) => {
@@ -43,6 +44,9 @@ try {
   step('load')
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.waitForSelector('text=Prudence')
+  // A fresh browser has no stored project, so the starter chooser opens first.
+  await page.getByRole('button', { name: "keep what's here" }).click()
+  await page.waitForTimeout(200)
   const body = await page.textContent('body')
   assert(body.includes('multi-server'), 'demo tree renders')
   ok('shell + demo tree rendered')
@@ -160,6 +164,36 @@ try {
   ok(`all ${boxes.length} nodes inside the viewport`)
 
   if (SHOT) await page.screenshot({ path: SHOT })
+
+  step('starter examples')
+  await page.getByRole('button', { name: 'examples', exact: true }).click()
+  await page.getByRole('button', { name: /Hire or contract/ }).click()
+  await page.waitForTimeout(600)
+  const seededGoal = await page.locator('header input').inputValue()
+  assert(seededGoal.includes('get a second pair of hands'), `seed loads its goal, saw: ${seededGoal}`)
+  assert((await page.locator('.react-flow__node').count()) === 4, 'seed renders its tree')
+  ok('example loads a half-decided tree')
+
+  step('share link')
+  await page.getByRole('button', { name: /^Review/ }).click()
+  await page.getByRole('button', { name: 'Copy share link' }).click()
+  await page.waitForTimeout(400)
+  const sharedUrl = await page.evaluate(() => navigator.clipboard.readText())
+  assert(sharedUrl.includes('#p='), `clipboard should hold a share link, saw: ${sharedUrl.slice(0, 60)}`)
+
+  // Fresh context: no stored project, so the shared tree must load without prompting.
+  const sharedContext = await browser.newContext({ viewport: { width: 1200, height: 800 } })
+  const sharedPage = await sharedContext.newPage()
+  const sharedErrors = []
+  sharedPage.on('pageerror', (e) => sharedErrors.push(e.message))
+  await sharedPage.goto(sharedUrl, { waitUntil: 'networkidle' })
+  await sharedPage.waitForTimeout(900)
+  const sharedGoal = await sharedPage.locator('header input').inputValue()
+  assert(sharedGoal.includes('get a second pair of hands'), `shared link carries the tree, saw: ${sharedGoal}`)
+  assert((await sharedPage.textContent('body')).includes('Opened from a shared link'), 'shared banner is shown')
+  assert(sharedErrors.length === 0, sharedErrors.join('\n'))
+  await sharedContext.close()
+  ok('share link opens the same tree with no server')
 
   step('console')
   assert(errors.length === 0, errors.join('\n'))
