@@ -29,6 +29,8 @@ function Flow() {
   const hydrated = useStore((s) => s.hydrated)
   const select = useStore((s) => s.select)
   const setPos = useStore((s) => s.setPos)
+  const focusRequest = useStore((s) => s.focusRequest)
+  const clearFocus = useStore((s) => s.clearFocus)
 
   const derived = useMemo(() => derive(project), [project])
 
@@ -49,6 +51,16 @@ function Flow() {
     const timer = setTimeout(() => fitView({ padding: 60, duration: 200 }), 40)
     return () => clearTimeout(timer)
   }, [count, hydrated, nodesInitialized, fitView])
+
+  // A finder hit or outline click asks the canvas to centre that node.
+  useEffect(() => {
+    if (!focusRequest) return
+    const timer = setTimeout(() => {
+      fitView({ nodes: [{ id: focusRequest }], duration: 350, maxZoom: 1.2, padding: 120 })
+      clearFocus()
+    }, 60)
+    return () => clearTimeout(timer)
+  }, [focusRequest, fitView, clearFocus])
 
   const onNodeClick: NodeMouseHandler = (_, node) => select(node.id)
 

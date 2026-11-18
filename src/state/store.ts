@@ -69,6 +69,14 @@ type Store = {
 
   panel: 'node' | 'review'
   setPanel: (panel: 'node' | 'review') => void
+  view: 'canvas' | 'outline'
+  setView: (view: 'canvas' | 'outline') => void
+  finderOpen: boolean
+  setFinder: (open: boolean) => void
+  /** Set once when something asks the canvas to centre a node; cleared by the canvas. */
+  focusRequest: string | null
+  requestFocus: (id: string) => void
+  clearFocus: () => void
 
   rename: (id: string, question: string) => void
   setGoal: (goal: string) => void
@@ -130,6 +138,9 @@ export const useStore = create<Store>((set, get) => {
     expandingId: null,
     premortemId: null,
     panel: 'node',
+    view: 'canvas',
+    finderOpen: false,
+    focusRequest: null,
 
     hydrate: async () => {
       const stored = await loadProject()
@@ -348,6 +359,14 @@ export const useStore = create<Store>((set, get) => {
     },
 
     setPanel: (panel) => set({ panel }),
+
+    setView: (view) => set({ view }),
+
+    setFinder: (open) => set({ finderOpen: open }),
+
+    requestFocus: (id) => set({ selectedId: id, panel: 'node', finderOpen: false, focusRequest: id }),
+
+    clearFocus: () => set({ focusRequest: null }),
 
     ask: async (nodeId) => {
       const s = get()

@@ -125,6 +125,31 @@ try {
   assert((await nodes.count()) === grown, 'tree survived reload')
   ok('IndexedDB persistence works')
 
+  step('cmd+k finder')
+  await page.keyboard.press('Control+k')
+  await page.waitForTimeout(250)
+  await page.getByPlaceholder(/Jump to a decision/).fill('azure')
+  await page.waitForTimeout(200)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(600)
+  const found = await page.locator('textarea').first().inputValue()
+  assert(found.includes('AWS or Azure'), `finder should open that node, saw: ${found}`)
+  ok('finder jumps to a node by its chosen option')
+
+  step('outline view')
+  await page.getByRole('button', { name: 'outline', exact: true }).click()
+  await page.waitForTimeout(300)
+  const row = page.getByRole('button', { name: /background job runner/ })
+  assert((await row.count()) > 0, 'outline lists the tree')
+  await row.first().click()
+  await page.waitForTimeout(250)
+  const fromOutline = await page.locator('textarea').first().inputValue()
+  assert(fromOutline.includes('background job runner'), 'outline row selects the node')
+  ok('outline lists and selects')
+
+  await page.getByRole('button', { name: 'canvas', exact: true }).click()
+  await page.waitForTimeout(700)
+
   step('nothing is clipped')
   const boxes = await page
     .locator('.react-flow__node')

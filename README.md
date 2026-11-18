@@ -72,6 +72,9 @@ Flags are computed, never stored: `premature` (parent undecided), `stale` (answe
 different tree), `abandoned` (a branch you didn't take), `at risk` (backward induction says the
 choice rests on unlikely assumptions).
 
+Two ways to read the same tree: the canvas, and an **outline** list that survives trees larger than
+one screen. `Cmd/Ctrl+K` jumps to any node by question or by the option you chose.
+
 Export produces `DECISIONS.md`: the path you took, each fork, what you rejected, and where the
 model's probability disagreed with yours.
 
@@ -80,7 +83,7 @@ model's probability disagreed with yours.
 Early, but the whole loop works: canvas, tree editing, undo, autosave, ask + verdicts, grill,
 expand, premortem, decide/park/reopen, probability override, scheduled retrospectives,
 deterministic review, markdown/JSON export.
-Not yet: node search, outline view, collaboration, sync, mobile layout.
+Not yet: collaboration, sync, mobile layout.
 
 Build in progress is documented in `AGENTS.md` (local) and the spec outside this repo.
 

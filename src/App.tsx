@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Canvas } from './canvas/Canvas'
 import { lint } from './model/lint'
 import { countNodes } from './model/ops'
+import { Finder } from './panels/Finder'
 import { Inspector } from './panels/Inspector'
+import { Outline } from './panels/Outline'
 import { Review } from './panels/Review'
 import { Settings } from './panels/Settings'
 import { useStore } from './state/store'
@@ -19,6 +21,9 @@ export function App() {
   const panel = useStore((s) => s.panel)
   const setPanel = useStore((s) => s.setPanel)
   const openSettings = useStore((s) => s.openSettings)
+  const view = useStore((s) => s.view)
+  const setView = useStore((s) => s.setView)
+  const setFinder = useStore((s) => s.setFinder)
 
   const provider =
     useStore((s) => s.project.providers.find((p) => p.id === s.activeProviderId)) ??
@@ -32,6 +37,11 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setFinder(true)
+        return
+      }
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return
       e.preventDefault()
       if (e.shiftKey) redo()
@@ -39,7 +49,7 @@ export function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo])
+  }, [undo, redo, setFinder])
 
   const tab = (active: boolean) =>
     [
@@ -52,7 +62,25 @@ export function App() {
       <header className="flex items-center gap-3 border-b border-white/10 px-4 py-2.5">
         <span className="text-sm font-semibold tracking-wide text-white">Prudence</span>
         <GoalField />
-        <span className="ml-auto text-[11px] text-white/30">{countNodes(project.root)} nodes</span>
+        <div className="ml-auto flex overflow-hidden rounded border border-white/10 text-[11px]">
+          {(['canvas', 'outline'] as const).map((option) => (
+            <button
+              key={option}
+              onClick={() => setView(option)}
+              className={view === option ? 'bg-white/10 px-2 py-1 text-white' : 'px-2 py-1 text-white/40 hover:text-white/70'}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setFinder(true)}
+          className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:border-white/25 hover:text-white"
+          title="Find a decision (Ctrl/Cmd+K)"
+        >
+          find
+        </button>
+        <span className="text-[11px] text-white/30">{countNodes(project.root)} nodes</span>
         <button
           onClick={openSettings}
           className="max-w-48 truncate rounded border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:border-white/25 hover:text-white"
@@ -84,7 +112,7 @@ export function App() {
 
       <main className="flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">
-          <Canvas />
+          {view === 'canvas' ? <Canvas /> : <Outline />}
           {!hydrated && (
             <div className="absolute inset-x-0 bottom-3 text-center text-[11px] text-white/30">
               loading…
@@ -111,6 +139,7 @@ export function App() {
       </main>
 
       <Settings />
+      <Finder />
     </div>
   )
 }
