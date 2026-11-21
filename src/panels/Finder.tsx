@@ -40,7 +40,7 @@ export function Finder() {
       onClick={() => setFinder(false)}
     >
       <div
-        className="w-full max-w-lg overflow-hidden rounded-lg border border-white/10 bg-[#131317] shadow-2xl"
+        className="w-full max-w-lg overflow-hidden rounded-lg border border-line bg-panel shadow-[0_24px_64px_rgba(0,0,0,0.7)]"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -62,12 +62,12 @@ export function Finder() {
             }
           }}
           placeholder="Jump to a decision…  (↑↓ to move, Enter to open)"
-          className="w-full border-b border-white/10 bg-transparent px-3 py-2.5 text-[13px] text-white outline-none placeholder:text-white/25"
+          className="w-full border-b border-line bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-ink-3/70"
         />
 
         <ul className="max-h-72 overflow-y-auto p-1">
           {results.length === 0 && (
-            <li className="px-2 py-3 text-[11px] text-white/30">nothing matches</li>
+            <li className="px-2 py-3 text-[11px] text-ink-3">nothing matches</li>
           )}
           {results.map((node, i) => (
             <li key={node.id}>
@@ -75,14 +75,14 @@ export function Finder() {
                 onClick={() => choose(node)}
                 onMouseEnter={() => setIndex(i)}
                 className={[
-                  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12px]',
-                  i === index ? 'bg-white/10 text-white' : 'text-white/60',
+                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px]',
+                  i === index ? 'bg-accent/10 text-ink' : 'text-ink-2',
                 ].join(' ')}
               >
                 <StateDot state={node.state} />
                 <span className="min-w-0 flex-1 truncate">{node.question}</span>
                 {node.choice && (
-                  <span className="shrink-0 truncate text-[10px] text-emerald-300/60">
+                  <span className="shrink-0 truncate text-[10px] text-accent/70">
                     → {node.choice}
                   </span>
                 )}
@@ -97,9 +97,9 @@ export function Finder() {
 
 function StateDot({ state }: { state: Decision['state'] }) {
   const colour: Record<string, string> = {
-    open: 'bg-white/25',
+    open: 'bg-ink-3',
     asked: 'bg-amber-400',
-    decided: 'bg-emerald-400',
+    decided: 'bg-accent',
     parked: 'bg-slate-500',
   }
   return <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${colour[state]}`} />

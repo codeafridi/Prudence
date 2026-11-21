@@ -46,7 +46,7 @@ function flatten(root: Decision): Entry[] {
   return out
 }
 
-function truncateLabel(text: string, max = 24): string {
+function truncateLabel(text: string, max = 30): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`
 }
 
@@ -71,14 +71,14 @@ export function derive(project: Project): Derived {
       label: truncateLabel(
         via.kind === 'option' ? via.option : via.kind === 'risk' ? 'risk' : 'assumed',
       ),
-      labelStyle: { fill: abandoned ? '#52525b' : '#a1a1aa', fontSize: 10 },
-      labelBgStyle: { fill: '#0b0b0d', fillOpacity: 0.85 },
+      labelStyle: { fill: abandoned ? '#5b5f66' : '#b4b8bf', fontSize: 10, fontWeight: 500 },
+      labelBgStyle: { fill: '#0d0e10', fillOpacity: 0.9 },
       labelBgPadding: [3, 2] as [number, number],
       style: abandoned
-        ? { stroke: '#3f3f46', strokeDasharray: '4 4', opacity: 0.5 }
+        ? { stroke: '#33363c', strokeDasharray: '4 4', opacity: 0.6 }
         : onPath
-          ? { stroke: '#34d399', strokeWidth: 1.8 }
-          : { stroke: '#52525b' },
+          ? { stroke: '#34d399', strokeWidth: 1.5 }
+          : { stroke: '#3a3d44' },
     })
   }
 
@@ -94,7 +94,7 @@ export function derive(project: Project): Derived {
       type: 'decision',
       // A hand-placed node keeps its position; everything else follows dagre (Tidy clears `pos`).
       position: decision.pos ?? computed[decision.id],
-      style: { opacity: abandoned ? 0.45 : 1 },
+      style: { opacity: abandoned ? 0.5 : 1 },
       data: {
         decision,
         flags: decisionFlags(decision, parent, abandoned),

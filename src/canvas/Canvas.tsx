@@ -95,7 +95,7 @@ function Flow() {
       proOptions={{ hideAttribution: true }}
       nodesConnectable={false}
     >
-      <Background gap={24} color="#1c1c22" />
+      <Background gap={28} color="#15171b" />
       <Controls showInteractive={false} />
     </ReactFlow>
   )

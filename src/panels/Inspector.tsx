@@ -1,8 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { isFresh } from '../model/hash'
 import { canRemoveOption, countNodes, findNode } from '../model/ops'
 import type { Decision, Verdict } from '../model/types'
 import { useStore } from '../state/store'
+
+/**
+ * The inspector is scanned, not read: quiet label, loud value, one hairline between sections.
+ * Nothing here gets its own box — a field is a field because of its fill, not its border.
+ */
+
+const primary =
+  'h-7 rounded-md bg-accent px-2.5 text-[11px] font-medium text-[#06231a] transition-colors hover:bg-accent/90 disabled:opacity-30'
+
+const secondary =
+  'h-7 rounded-md border border-line px-2 text-[11px] text-ink-2 transition-colors hover:border-line-hi hover:bg-white/5 hover:text-ink disabled:opacity-30'
+
+const small = 'h-6 rounded px-1.5 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink'
+
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <section className="border-t border-line py-3 first:border-t-0 first:pt-0">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="label">{title}</span>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
+}
 
 export function Inspector() {
   const root = useStore((s) => s.project.root)
@@ -10,15 +43,16 @@ export function Inspector() {
   const node = selectedId ? findNode(root, selectedId) : undefined
 
   return (
-    <div className="flex-1 overflow-y-auto p-3 text-[13px]">
+    <div className="flex-1 overflow-y-auto px-3 pb-8 pt-3 text-[12px]">
       {!node ? (
-        <p className="mt-8 text-center text-xs text-white/30">
-          Select a node to edit it.
-          <br />
-          Click an option's <span className="text-white/50">+</span> to grow the tree.
-        </p>
+        <div className="mt-16 px-4 text-center">
+          <p className="text-[12px] text-ink-3">Select a node to edit it.</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-ink-3/70">
+            Click an option's <span className="text-ink-2">+</span> to grow the tree.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div>
           <QuestionField key={node.id} node={node} />
           <VerdictSection node={node} />
           <DecisionSection key={`${node.id}-${node.state}`} node={node} />
@@ -26,7 +60,7 @@ export function Inspector() {
           <OptionsSection node={node} />
           <ChildrenSection node={node} />
           {node.id !== root.id && <DeleteButton node={node} />}
-          <p className="border-t border-white/5 pt-2 text-[10px] text-white/25">
+          <p className="mt-3 border-t border-line pt-2 text-[10px] text-ink-3/70">
             {countNodes(node)} node{countNodes(node) === 1 ? '' : 's'} in subtree
           </p>
         </div>
@@ -47,7 +81,7 @@ function QuestionField({ node }: { node: Decision }) {
 
   return (
     <label className="block">
-      <span className="text-[10px] uppercase tracking-wider text-white/35">Question</span>
+      <span className="label">Question</span>
       <textarea
         value={value}
         rows={2}
@@ -59,7 +93,7 @@ function QuestionField({ node }: { node: Decision }) {
             e.currentTarget.blur()
           }
         }}
-        className="mt-1 w-full resize-none rounded border border-white/10 bg-black/30 px-2 py-1.5 text-[13px] leading-snug outline-none focus:border-white/30"
+        className="field mt-2 resize-none"
       />
     </label>
   )
@@ -79,28 +113,28 @@ function VerdictSection({ node }: { node: Decision }) {
   const latest = node.verdicts[0]
 
   return (
-    <section>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-white/35">Ask</span>
-        <button
-          onClick={() => void ask(node.id)}
-          disabled={asking}
-          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-white/80 hover:border-white/35 hover:text-white disabled:opacity-40"
-        >
+    <Section
+      title="Ask"
+      action={
+        <button onClick={() => void ask(node.id)} disabled={asking} className={small}>
           {asking ? 'asking…' : latest ? 'ask again' : 'ask'}
         </button>
-      </div>
-
+      }
+    >
       {!hasProvider && (
         <button
           onClick={openSettings}
-          className="mt-1 w-full rounded border border-dashed border-white/15 px-2 py-1 text-[11px] text-white/40 hover:text-white"
+          className="w-full rounded-md border border-dashed border-white/20 px-2 py-1.5 text-[11px] text-ink-2 transition-colors hover:border-accent/50 hover:text-accent"
         >
           no model configured — add one
         </button>
       )}
 
-      {askError && <p className="mt-1 text-[11px] leading-snug text-red-400/80">{askError}</p>}
+      {askError && (
+        <p className="rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] leading-snug text-red-300/90">
+          {askError}
+        </p>
+      )}
 
       {latest ? (
         <VerdictCard
@@ -111,11 +145,11 @@ function VerdictSection({ node }: { node: Decision }) {
           onPromote={(text) => promoteUnknown(node.id, text)}
         />
       ) : (
-        <p className="mt-1 text-[11px] text-white/25">
+        <p className="text-[11px] leading-relaxed text-ink-3">
           No answer yet. You can also decide without asking.
         </p>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -133,38 +167,39 @@ function VerdictCard({
   onPromote: (text: string) => void
 }) {
   return (
-    <div className="mt-2 space-y-2 rounded border border-white/10 bg-black/25 p-2">
-      <p className="text-xs text-white/85">
-        <span className="text-emerald-400">pick</span> {verdict.pick}
-        {stale && <span className="ml-2 text-[10px] text-amber-400">stale</span>}
+    <div className="mt-2 rounded-md bg-white/[0.025] p-2">
+      <p className="flex items-baseline gap-1.5 text-[12px] text-ink">
+        <span className="label !text-[9px] text-accent">pick</span>
+        <span className="min-w-0 flex-1 font-medium">{verdict.pick}</span>
+        {stale && <span className="shrink-0 text-[10px] text-amber-400">stale</span>}
       </p>
-      <p className="text-[11px] leading-snug text-white/55">{verdict.why}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-ink-2">{verdict.why}</p>
 
-      <ul className="space-y-1">
+      <ul className="mt-2 space-y-px">
         {verdict.perOption.map((c) => (
-          <li key={c.option} className="rounded bg-white/[0.03] px-1.5 py-1 text-[11px]">
+          <li key={c.option} className="py-1">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="truncate text-white/70">{c.option}</span>
-              <span className="shrink-0 font-mono text-[10px] text-white/40">
+              <span className="min-w-0 truncate text-[11px] text-ink-2">{c.option}</span>
+              <span className="shrink-0 tabular-nums text-[10px] text-ink-3">
                 p {c.p.toFixed(2)} · {c.reversible ? 'reversible' : 'one-way'}
               </span>
             </div>
-            <p className="text-white/40">{c.outcome}</p>
+            <p className="text-[11px] text-ink-3">{c.outcome}</p>
           </li>
         ))}
       </ul>
 
-      <p className="text-[11px] leading-snug text-white/45">
-        <span className="text-white/30">flip if </span>
+      <p className="mt-1 border-t border-line pt-2 text-[11px] leading-relaxed text-ink-2">
+        <span className="label !text-[9px] mr-1">flip if</span>
         {verdict.flipIf}
       </p>
 
       {verdict.counter ? (
-        <div className="rounded border border-red-400/15 bg-red-400/5 px-1.5 py-1">
-          <p className="text-[10px] uppercase tracking-wider text-red-400/60">against</p>
-          <p className="text-[11px] leading-snug text-white/60">{verdict.counter.why}</p>
-          <p className="mt-1 text-[11px] leading-snug text-white/35">
-            <span className="text-white/25">wrong if </span>
+        <div className="mt-2 rounded-md bg-red-500/[0.07] px-2 py-1.5">
+          <span className="label !text-[9px] text-red-400/70">against</span>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-ink-2">{verdict.counter.why}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-ink-3">
+            <span className="label !text-[9px] mr-1">wrong if</span>
             {verdict.counter.flipIf}
           </p>
         </div>
@@ -172,7 +207,7 @@ function VerdictCard({
         <button
           onClick={onGrill}
           disabled={grilling}
-          className="w-full rounded border border-red-400/20 px-2 py-1 text-[11px] text-red-300/70 hover:border-red-400/40 hover:text-red-300 disabled:opacity-40"
+          className="mt-2 w-full rounded-md px-2 py-1 text-left text-[11px] text-ink-3 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
           title="Ask for the strongest case against this pick"
         >
           {grilling ? 'arguing…' : 'grill this pick'}
@@ -180,14 +215,14 @@ function VerdictCard({
       )}
 
       {verdict.unknowns.length > 0 && (
-        <ul className="space-y-1 border-t border-white/5 pt-1">
+        <ul className="mt-2 space-y-0.5 border-t border-line pt-2">
           {verdict.unknowns.map((u) => (
-            <li key={u} className="flex items-start gap-1 text-[11px] text-sky-300/70">
+            <li key={u} className="group flex items-start gap-1 text-[11px] text-sky-300/60">
               <span className="min-w-0 flex-1">assumed: {u}</span>
               <button
                 onClick={() => onPromote(u)}
                 title="Make this an explicit decision"
-                className="shrink-0 rounded border border-sky-400/25 px-1 text-[10px] hover:border-sky-400/60 hover:text-sky-200"
+                className="shrink-0 px-0.5 text-ink-3 opacity-0 transition-opacity hover:text-sky-200 group-hover:opacity-100"
               >
                 +
               </button>
@@ -196,8 +231,8 @@ function VerdictCard({
         </ul>
       )}
 
-      <p className="text-[10px] text-white/20">
-        {verdict.model} · {verdict.tokens.in + verdict.tokens.out} tokens
+      <p className="mt-2 text-[10px] tabular-nums text-ink-3/60">
+        {verdict.model} · {(verdict.tokens.in + verdict.tokens.out).toLocaleString()} tokens
       </p>
     </div>
   )
@@ -216,26 +251,29 @@ function DecisionSection({ node }: { node: Decision }) {
   const [rationale, setRationale] = useState(node.rationale ?? '')
 
   const decided = node.state === 'decided'
+  const dirty = !decided || choice !== (node.choice ?? '') || rationale !== (node.rationale ?? '')
   const aiP = node.verdicts[0]?.perOption.find((c) => c.option === node.choice)?.p
   const p = node.pOverride ?? aiP ?? 0.5
 
   return (
-    <section className="space-y-2">
-      <span className="text-[10px] uppercase tracking-wider text-white/35">
-        {decided ? 'Decision' : 'Decide'}
-      </span>
-
-      <ul className="space-y-1">
+    <Section title={decided ? 'Decision' : 'Decide'}>
+      <ul className="space-y-0.5">
         {node.options.map((option) => (
           <li key={option}>
-            <label className="flex items-center gap-2 rounded border border-white/10 bg-black/20 px-2 py-1">
+            <label
+              className={[
+                'flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
+                choice === option ? 'bg-white/[0.06] text-ink' : 'text-ink-2 hover:bg-white/[0.03]',
+              ].join(' ')}
+            >
               <input
                 type="radio"
                 name={`choice-${node.id}`}
                 checked={choice === option}
                 onChange={() => setChoice(option)}
+                className="accent-emerald-400"
               />
-              <span className="min-w-0 flex-1 truncate">{option}</span>
+              <span className="min-w-0 flex-1 truncate text-[12px]">{option}</span>
             </label>
           </li>
         ))}
@@ -246,14 +284,14 @@ function DecisionSection({ node }: { node: Decision }) {
         onChange={(e) => setRationale(e.target.value)}
         rows={2}
         placeholder="Why — one line. Required."
-        className="w-full resize-none rounded border border-white/10 bg-black/30 px-2 py-1.5 text-[12px] leading-snug outline-none focus:border-white/30"
+        className="field mt-2 resize-none"
       />
 
-      <div className="flex gap-1">
+      <div className="mt-2 flex items-center gap-1">
         <button
           onClick={() => decide(node.id, choice, rationale)}
-          disabled={!choice || rationale.trim().length === 0}
-          className="flex-1 rounded border border-emerald-400/30 px-2 py-1 text-[11px] text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-25"
+          disabled={!choice || rationale.trim().length === 0 || !dirty}
+          className={primary}
         >
           {decided ? 'Update decision' : 'Decide'}
         </button>
@@ -261,22 +299,19 @@ function DecisionSection({ node }: { node: Decision }) {
         {decided ? (
           <button
             onClick={() => reopen(node.id)}
-            className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:text-white"
+            className={secondary}
             title="Archive this decision and think again"
           >
             Reopen
           </button>
         ) : node.state === 'parked' ? (
-          <button
-            onClick={() => unpark(node.id)}
-            className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:text-white"
-          >
+          <button onClick={() => unpark(node.id)} className={secondary}>
             Unpark
           </button>
         ) : (
           <button
             onClick={() => park(node.id)}
-            className="rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:text-white"
+            className={secondary}
             title="Not now — keep it visible but out of the way"
           >
             Park
@@ -288,7 +323,7 @@ function DecisionSection({ node }: { node: Decision }) {
         <button
           onClick={() => void expand(node.id)}
           disabled={expanding}
-          className="w-full rounded border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:border-white/25 hover:text-white disabled:opacity-40"
+          className="mt-1 h-7 w-full rounded-md border border-line text-[11px] text-ink-2 transition-colors hover:border-line-hi hover:bg-white/5 hover:text-ink disabled:opacity-40"
           title="Show what this choice requires — questions only, no answers"
         >
           {expanding ? 'working out what it requires…' : 'what does this require?'}
@@ -296,15 +331,15 @@ function DecisionSection({ node }: { node: Decision }) {
       )}
 
       {decided && (
-        <div className="rounded border border-white/5 bg-black/20 p-2">
-          <div className="flex items-center justify-between text-[10px] text-white/35">
-            <span>your probability</span>
-            <span className="font-mono text-white/60">
+        <div className="mt-2 rounded-md bg-white/[0.025] px-2 py-1.5">
+          <div className="flex items-baseline justify-between text-[10px] text-ink-3">
+            <span className="label !text-[9px]">your probability</span>
+            <span className="flex items-baseline gap-1 tabular-nums text-ink-2">
               {p.toFixed(2)}
               {node.pOverride !== undefined && (
                 <button
                   onClick={() => adjustP(node.id, undefined)}
-                  className="ml-1 text-white/30 hover:text-white"
+                  className="text-[10px] text-ink-3 hover:text-ink"
                   title="Back to the model's estimate"
                 >
                   reset
@@ -321,31 +356,33 @@ function DecisionSection({ node }: { node: Decision }) {
             onChange={(e) => adjustP(node.id, Number(e.target.value))}
             className="mt-1 w-full accent-emerald-400"
           />
-          <p className="text-[10px] text-white/25">
-            {aiP === undefined ? 'no model estimate' : `model said ${aiP.toFixed(2)}`}
-          </p>
+          <div className="flex justify-between text-[9px] text-ink-3/60">
+            <span>unlikely</span>
+            <span>{aiP === undefined ? 'no model estimate' : `model said ${aiP.toFixed(2)}`}</span>
+            <span>likely</span>
+          </div>
         </div>
       )}
 
       {decided && <ReviewControls node={node} />}
 
       {node.history.length > 0 && (
-        <details className="rounded border border-white/5 bg-black/20 px-2 py-1 text-[11px] text-white/45">
-          <summary className="cursor-pointer text-white/35">
+        <details className="mt-2 rounded-md bg-white/[0.02] px-2 py-1 text-[11px] text-ink-2">
+          <summary className="cursor-pointer text-ink-3">
             {node.history.length} previous decision{node.history.length === 1 ? '' : 's'}
           </summary>
           <ul className="mt-1 space-y-1">
             {node.history.map((h, i) => (
               <li key={i}>
-                <span className="text-white/70">{h.choice}</span>
-                <span className="text-white/25"> — {new Date(h.at).toISOString().slice(0, 10)}</span>
-                {h.rationale && <p className="text-white/35">{h.rationale}</p>}
+                <span className="text-ink-2">{h.choice}</span>
+                <span className="text-ink-3/60"> — {new Date(h.at).toISOString().slice(0, 10)}</span>
+                {h.rationale && <p className="text-ink-3">{h.rationale}</p>}
               </li>
             ))}
           </ul>
         </details>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -357,24 +394,24 @@ function ReviewControls({ node }: { node: Decision }) {
   const due = node.reviewAt !== undefined && node.reviewAt <= Date.now()
 
   return (
-    <div className="space-y-1 rounded border border-white/5 bg-black/20 p-2">
-      <div className="flex items-center justify-between text-[10px] text-white/35">
-        <span>review</span>
+    <div className="mt-2 rounded-md bg-white/[0.025] px-2 py-1.5">
+      <div className="flex items-center justify-between text-[10px] text-ink-3">
+        <span className="label !text-[9px]">review</span>
         {node.review ? (
-          <span className="text-white/50">{node.review.verdict}</span>
+          <span className="text-ink-2">{node.review.verdict}</span>
         ) : node.reviewAt ? (
-          <span className={due ? 'text-amber-400/80' : 'text-white/40'}>
+          <span className={due ? 'text-amber-400/80' : 'text-ink-3'}>
             {due ? 'due ' : 'on '}
             {new Date(node.reviewAt).toISOString().slice(0, 10)}
             <button
               onClick={() => setReviewAt(node.id, undefined)}
-              className="ml-1 text-white/25 hover:text-white"
+              className="ml-1 text-ink-3/60 hover:text-ink"
             >
               ×
             </button>
           </span>
         ) : (
-          <span className="flex gap-1">
+          <span className="flex items-center rounded bg-white/[0.04] p-0.5">
             {[
               ['1m', 30],
               ['3m', 90],
@@ -383,7 +420,7 @@ function ReviewControls({ node }: { node: Decision }) {
               <button
                 key={label}
                 onClick={() => setReviewAt(node.id, days as number)}
-                className="rounded border border-white/10 px-1 hover:text-white"
+                className="rounded px-1.5 py-0.5 text-[10px] text-ink-3 transition-colors hover:bg-white/5 hover:text-ink"
                 title="Ask yourself later whether this was right"
               >
                 {label}
@@ -394,7 +431,7 @@ function ReviewControls({ node }: { node: Decision }) {
       </div>
 
       {node.review ? (
-        <p className="text-[11px] text-white/35">
+        <p className="mt-1 text-[11px] text-ink-3">
           checked {new Date(node.review.at).toISOString().slice(0, 10)}
           {node.review.note ? ` — ${node.review.note}` : ''}
         </p>
@@ -404,14 +441,21 @@ function ReviewControls({ node }: { node: Decision }) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="what happened? (optional)"
-            className="w-full rounded border border-white/10 bg-black/30 px-1.5 py-1 text-[11px] outline-none focus:border-white/25"
+            className="field mt-1.5"
           />
-          <div className="flex gap-1">
+          <div className="mt-1.5 flex gap-0.5 rounded bg-white/[0.04] p-0.5">
             {(['worked', 'mixed', 'failed'] as const).map((verdict) => (
               <button
                 key={verdict}
                 onClick={() => recordReview(node.id, verdict, note)}
-                className="flex-1 rounded border border-white/10 px-1 py-0.5 text-[10px] text-white/50 hover:border-white/30 hover:text-white"
+                className={[
+                  'h-6 flex-1 rounded text-[10px] transition-colors hover:bg-white/5',
+                  verdict === 'worked'
+                    ? 'text-accent/80'
+                    : verdict === 'failed'
+                      ? 'text-red-400/70'
+                      : 'text-ink-3',
+                ].join(' ')}
               >
                 {verdict}
               </button>
@@ -431,34 +475,43 @@ function PremortemSection({ node }: { node: Decision }) {
   if (node.state !== 'decided') return null
 
   return (
-    <section>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-white/35">Premortem</span>
+    <Section
+      title="Premortem"
+      action={
         <button
           onClick={() => void premortem(node.id)}
           disabled={busy}
-          className="rounded border border-white/15 px-2 py-0.5 text-[11px] text-white/70 hover:border-white/35 hover:text-white disabled:opacity-40"
+          className={small}
           title="Assume this failed in a year — why?"
         >
           {busy ? 'thinking…' : node.premortem ? 'again' : 'run'}
         </button>
-      </div>
-
+      }
+    >
       {node.premortem ? (
-        <ul className="mt-1 space-y-1">
+        <ul className="space-y-0.5">
           {node.premortem.reasons.map((reason) => (
             <li
               key={reason.why}
-              className="flex items-start gap-1 rounded border border-white/5 bg-black/20 px-1.5 py-1 text-[11px]"
+              className="group flex items-start gap-2 rounded-md px-1 py-1 text-[11px] hover:bg-white/[0.03]"
             >
-              <span className="min-w-0 flex-1 text-white/55">{reason.why}</span>
-              <span className="shrink-0 text-[10px] uppercase text-amber-400/60">
+              <span className="min-w-0 flex-1 leading-relaxed text-ink-2">{reason.why}</span>
+              <span
+                className={[
+                  'shrink-0 text-[9px] uppercase tracking-wider',
+                  reason.likelihood === 'high'
+                    ? 'text-red-400/70'
+                    : reason.likelihood === 'medium'
+                      ? 'text-amber-400/70'
+                      : 'text-ink-3',
+                ].join(' ')}
+              >
                 {reason.likelihood}
               </span>
               <button
                 onClick={() => promote(node.id, reason.why)}
                 title="Make this a decision to think about"
-                className="shrink-0 text-white/30 hover:text-white"
+                className="shrink-0 text-ink-3 opacity-0 transition-opacity hover:text-ink group-hover:opacity-100"
               >
                 +
               </button>
@@ -466,11 +519,11 @@ function PremortemSection({ node }: { node: Decision }) {
           ))}
         </ul>
       ) : (
-        <p className="mt-1 text-[11px] text-white/25">
+        <p className="text-[11px] leading-relaxed text-ink-3">
           Imagine it failed a year from now. Worth asking before you commit.
         </p>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -481,13 +534,12 @@ function OptionsSection({ node }: { node: Decision }) {
   const [draft, setDraft] = useState('')
 
   return (
-    <section>
-      <span className="text-[10px] uppercase tracking-wider text-white/35">Options</span>
-      <ul className="mt-1 space-y-1">
+    <Section title="Options">
+      <ul className="space-y-0.5">
         {node.options.map((option) => (
           <li
             key={option}
-            className="flex items-center gap-2 rounded border border-white/10 bg-black/20 px-2 py-1"
+            className="group flex items-center gap-2 rounded-md px-2 py-1 text-[12px] text-ink-2 hover:bg-white/[0.03]"
           >
             <span className="min-w-0 flex-1 truncate" title={option}>
               {option}
@@ -495,7 +547,7 @@ function OptionsSection({ node }: { node: Decision }) {
             <button
               onClick={() => createChild(node.id, { kind: 'option', option })}
               title="Add a decision this option requires"
-              className="text-white/40 hover:text-white"
+              className="text-ink-3 opacity-0 transition-opacity hover:text-ink group-hover:opacity-100"
             >
               +
             </button>
@@ -507,7 +559,7 @@ function OptionsSection({ node }: { node: Decision }) {
                   ? 'Remove option'
                   : 'In use, chosen, or would leave fewer than two options'
               }
-              className="text-white/25 hover:text-red-400 disabled:opacity-20 disabled:hover:text-white/25"
+              className="text-ink-3/60 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100 disabled:opacity-0"
             >
               ×
             </button>
@@ -516,7 +568,7 @@ function OptionsSection({ node }: { node: Decision }) {
       </ul>
 
       <form
-        className="mt-1 flex gap-1"
+        className="mt-1"
         onSubmit={(e) => {
           e.preventDefault()
           addOption(node.id, draft)
@@ -527,18 +579,18 @@ function OptionsSection({ node }: { node: Decision }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="add option…"
-          className="min-w-0 flex-1 rounded border border-white/10 bg-black/30 px-2 py-1 text-xs outline-none focus:border-white/30"
+          className="field"
         />
       </form>
 
       <button
         onClick={() => createChild(node.id, { kind: 'assumption' })}
         title="A thing you had to assume — spec §4"
-        className="mt-1 w-full rounded border border-sky-400/20 px-2 py-1 text-left text-[11px] text-sky-300/70 hover:border-sky-400/40 hover:text-sky-300"
+        className="mt-1 w-full rounded-md px-2 py-1 text-left text-[11px] text-ink-3 transition-colors hover:bg-sky-400/5 hover:text-sky-300"
       >
         + assumption
       </button>
-    </section>
+    </Section>
   )
 }
 
@@ -547,26 +599,23 @@ function ChildrenSection({ node }: { node: Decision }) {
   if (node.children.length === 0) return null
 
   return (
-    <section>
-      <span className="text-[10px] uppercase tracking-wider text-white/35">
-        Children ({node.children.length})
-      </span>
-      <ul className="mt-1 space-y-1">
+    <Section title={`Children (${node.children.length})`}>
+      <ul className="space-y-0.5">
         {node.children.map((child) => (
           <li key={child.id}>
             <button
               onClick={() => select(child.id)}
-              className="w-full rounded border border-white/5 bg-white/[0.03] px-2 py-1 text-left hover:border-white/20"
+              className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
             >
-              <span className="block truncate text-[10px] text-white/35">
+              <span className="block truncate text-[10px] text-ink-3">
                 {child.via?.kind === 'option' ? child.via.option : 'assumed'}
               </span>
-              <span className="block truncate text-xs text-white/80">{child.question}</span>
+              <span className="block truncate text-[12px] text-ink-2">{child.question}</span>
             </button>
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   )
 }
 
@@ -579,7 +628,7 @@ function DeleteButton({ node }: { node: Decision }) {
       onClick={() => {
         if (confirm(`Delete this node and its ${total - 1} descendant(s)?`)) remove(node.id)
       }}
-      className="w-full rounded border border-red-500/20 px-2 py-1 text-[11px] text-red-400/70 hover:border-red-500/50 hover:text-red-400"
+      className="mt-3 w-full rounded-md px-2 py-1 text-left text-[11px] text-red-400/50 transition-colors hover:bg-red-500/10 hover:text-red-400"
     >
       Delete subtree ({total} node{total === 1 ? '' : 's'})
     </button>

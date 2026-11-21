@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/*
+ * One palette, one accent. Surfaces step by luminance, structure comes from hairlines, and the
+ * only chromatic colours are semantic: emerald = decided / primary, amber = needs attention,
+ * red = risk, sky = assumption. Everything else is white at an opacity.
+ *
+ * No CDN fonts (AGENTS.md: no third-party requests), so the type is the system UI stack.
+ */
+@theme {
+  --color-canvas: #08090a;
+  --color-panel: #0d0e10;
+  --color-card: #14161a;
+  --color-card-hi: #1a1d22;
+  --color-line: #ffffff0f;
+  --color-line-hi: #ffffff1f;
+  --color-ink: #f2f3f5;
+  --color-ink-2: #a9aeb6;
+  --color-ink-3: #7b8088;
+  --color-accent: #34d399;
+}
+
 html,
 body,
 #root {
@@ -8,7 +28,125 @@ body,
 
 body {
   margin: 0;
-  background: #0b0b0d;
-  color: #e7e7ea;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv01", "ss03", "tnum";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* One micro-label for every section header, instead of three casings. */
+@utility label {
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+
+/* A field that does not shout: no border until focus. */
+@utility field {
+  width: 100%;
+  border-radius: 6px;
+  background: #ffffff08;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-ink);
+  outline: none;
+  transition: background 120ms, box-shadow 120ms;
+}
+@utility field-focus {
+  background: #ffffff0d;
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+input.field::placeholder,
+textarea.field::placeholder {
+  color: var(--color-ink-3);
+}
+input.field:focus,
+textarea.field:focus {
+  background: #ffffff0d;
+  box-shadow: 0 0 0 1px #34d39966;
+}
+
+/* React Flow ships a light control cluster; paint it into the palette. */
+.react-flow__controls {
+  margin: 12px;
+  box-shadow: 0 8px 24px #00000066;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-card);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-2);
+}
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+.react-flow__controls-button svg {
+  max-width: 14px;
+  max-height: 14px;
+}
+.react-flow__controls-button:hover {
+  background: var(--color-card-hi);
+  color: var(--color-ink);
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+.react-flow__edge-text {
+  font-variant-numeric: tabular-nums;
+}
+/* Handles are edge anchors, not controls: hide the ones that carry no signal at rest. */
+.react-flow__handle {
+  transition: opacity 120ms;
+}
+.react-flow__handle-left,
+.react-flow__handle-top {
+  opacity: 0;
+}
+.react-flow__node:hover .react-flow__handle-left,
+.react-flow__node.selected .react-flow__handle-left,
+.react-flow__node:hover .react-flow__handle-top,
+.react-flow__node.selected .react-flow__handle-top {
+  opacity: 0.7;
+}
+
+/* Horizontal chip rows scroll without advertising a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* The browser's default scrollbar is the one light-mode thing left on the page. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff1f transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: #ffffff1f;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #ffffff33;
 }

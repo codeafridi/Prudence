@@ -41,7 +41,7 @@ export function Review() {
     <div className="flex flex-1 flex-col overflow-hidden text-[12px]">
       <div className="flex-1 overflow-y-auto p-3">
         {findings.length === 0 ? (
-          <p className="mt-8 text-center text-xs text-white/30">
+          <p className="mt-16 px-4 text-center text-[12px] leading-relaxed text-ink-3">
             Nothing to flag. The tree is consistent with itself.
           </p>
         ) : (
@@ -53,12 +53,14 @@ export function Review() {
                     select(finding.nodeId)
                     setPanel('node')
                   }}
-                  className="w-full rounded border border-white/5 bg-white/[0.03] px-2 py-1 text-left hover:border-white/20"
+                  className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
                 >
-                  <span className="block text-[10px] uppercase tracking-wider text-amber-400/70">
+                  <span className="label block !text-[9px] text-amber-400/80">
                     {LABEL[finding.rule]}
                   </span>
-                  <span className="block text-white/60">{finding.detail}</span>
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-2">
+                    {finding.detail}
+                  </span>
                 </button>
               </li>
             ))}
@@ -66,13 +68,13 @@ export function Review() {
         )}
       </div>
 
-      <div className="space-y-1 border-t border-white/10 p-3">
-        <span className="text-[10px] uppercase tracking-wider text-white/35">Export</span>
+      <div className="space-y-1 border-t border-line p-3">
+        <span className="label">Export</span>
         <button
           onClick={() =>
             download(`${slugify(project.name)}-decisions.md`, exportMarkdown(project))
           }
-          className="w-full rounded border border-white/15 px-2 py-1 text-[11px] text-white/80 hover:border-white/35 hover:text-white"
+          className="h-7 w-full rounded-md bg-accent px-2 text-[11px] font-medium text-[#06231a] transition-colors hover:bg-accent/90"
         >
           Decision log (.md)
         </button>
@@ -80,13 +82,13 @@ export function Review() {
           onClick={() => {
             download(`${slugify(project.name)}.json`, exportJson(project), 'application/json')
           }}
-          className="w-full rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:border-white/25 hover:text-white"
+          className="h-7 w-full rounded-md px-2 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink"
         >
           Project (.json)
         </button>
         <button
           onClick={() => void copyShare()}
-          className="w-full rounded border border-white/10 px-2 py-1 text-[11px] text-white/50 hover:border-white/25 hover:text-white"
+          className="h-7 w-full rounded-md px-2 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink"
           title="A read-only copy of this tree, encoded in the URL — no server involved"
         >
           {share === 'copied'
@@ -95,7 +97,7 @@ export function Review() {
               ? 'clipboard blocked — use the file'
               : 'Copy share link'}
         </button>
-        <p className="pt-1 text-[10px] leading-snug text-white/20">
+        <p className="pt-1 text-[10px] leading-relaxed text-ink-3/70">
           Keys never leave this browser, so neither the file nor the link can contain one.
         </p>
       </div>

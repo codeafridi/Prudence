@@ -42,9 +42,9 @@ export function Outline() {
           <div
             key={node.id}
             className={[
-              'group flex items-center gap-1.5 rounded px-1 py-1',
-              node.id === selectedId ? 'bg-white/10' : 'hover:bg-white/[0.04]',
-              abandoned ? 'opacity-45' : '',
+              'group flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors',
+              node.id === selectedId ? 'bg-accent/10' : 'hover:bg-white/[0.04]',
+              abandoned ? 'opacity-50' : '',
             ].join(' ')}
             style={{ paddingLeft: `${depth * 18 + 4}px` }}
           >
@@ -58,7 +58,7 @@ export function Outline() {
                 })
               }
               disabled={!hasChildren}
-              className="w-4 shrink-0 text-[10px] text-white/25 hover:text-white disabled:opacity-0"
+              className="w-4 shrink-0 text-[10px] text-ink-3 hover:text-ink disabled:opacity-0"
               title={isCollapsed ? 'Expand' : 'Collapse'}
             >
               {isCollapsed ? '▸' : '▾'}
@@ -68,18 +68,18 @@ export function Outline() {
               className={[
                 'h-1.5 w-1.5 shrink-0 rounded-full',
                 node.state === 'decided'
-                  ? 'bg-emerald-400'
+                  ? 'bg-accent'
                   : node.state === 'asked'
                     ? 'bg-amber-400'
                     : node.state === 'parked'
                       ? 'bg-slate-500'
-                      : 'bg-white/25',
+                      : 'bg-ink-3',
               ].join(' ')}
             />
 
             <button
               onClick={() => requestFocus(node.id)}
-              className="min-w-0 flex-1 truncate text-left text-white/80"
+              className="min-w-0 flex-1 truncate text-left text-[12px] text-ink"
             >
               {node.question}
             </button>
@@ -87,11 +87,11 @@ export function Outline() {
             {nodeFlags?.atRisk && <span className="shrink-0 text-[10px] text-red-400">risk</span>}
             {nodeData?.stale && <span className="shrink-0 text-[10px] text-amber-400">stale</span>}
             {nodeFlags?.premature && (
-              <span className="shrink-0 text-[10px] text-white/25">premature</span>
+              <span className="shrink-0 text-[10px] text-ink-3">premature</span>
             )}
 
             {node.choice && (
-              <span className="max-w-40 shrink-0 truncate text-[11px] text-emerald-300/70">
+              <span className="max-w-40 shrink-0 truncate text-[11px] text-accent/80">
                 → {node.choice}
               </span>
             )}

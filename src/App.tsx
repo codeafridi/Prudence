@@ -65,16 +65,18 @@ export function App() {
   }, [undo, redo, setFinder])
 
   const chip =
-    'shrink-0 rounded border border-white/10 px-2 py-1 text-[11px] text-white/55 hover:border-white/25 hover:text-white disabled:opacity-25'
+    'h-6 rounded px-1.5 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2'
 
   const viewToggle = (
-    <div className="flex shrink-0 overflow-hidden rounded border border-white/10 text-[11px]">
+    <div className="flex shrink-0 items-center rounded-md border border-line bg-white/[0.03] p-0.5 text-[11px]">
       {(['canvas', 'outline'] as const).map((option) => (
         <button
           key={option}
           onClick={() => setView(option)}
           className={
-            view === option ? 'bg-white/10 px-2 py-1 text-white' : 'px-2 py-1 text-white/40 hover:text-white/70'
+            view === option
+              ? 'rounded bg-white/10 px-2 py-0.5 text-ink'
+              : 'rounded px-2 py-0.5 text-ink-3 transition-colors hover:text-ink-2'
           }
         >
           {option}
@@ -86,6 +88,7 @@ export function App() {
   const actions = (
     <>
       {viewToggle}
+      <span className="mx-1 h-3.5 w-px shrink-0 bg-line" />
       <button onClick={() => setPanel('review')} className={chip}>
         review
         {findings.length > 0 && <span className="ml-1 text-amber-300">{findings.length}</span>}
@@ -96,45 +99,52 @@ export function App() {
       <button onClick={() => setExamples(true)} className={chip} title="Load a starting tree">
         examples
       </button>
-      <button onClick={undo} disabled={!canUndo} className={chip}>
+      <span className="mx-1 h-3.5 w-px shrink-0 bg-line" />
+      <button onClick={undo} disabled={!canUndo} className={chip} title="Undo (Ctrl/Cmd+Z)">
         undo
       </button>
-      <button onClick={redo} disabled={!canRedo} className={chip}>
+      <button onClick={redo} disabled={!canRedo} className={chip} title="Redo (Ctrl/Cmd+Shift+Z)">
         redo
       </button>
-      <button onClick={tidy} className={chip}>
+      <button onClick={tidy} className={chip} title="Lay the tree out again">
         tidy
       </button>
     </>
   )
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="border-b border-white/10">
-        <div className="flex items-center gap-2 px-3 py-2 md:gap-3 md:px-4 md:py-2.5">
-          <span className="shrink-0 text-sm font-semibold tracking-wide text-white">Prudence</span>
+    <div className="flex h-full flex-col bg-canvas">
+      <header className="shrink-0 border-b border-line">
+        <div className="flex items-center gap-2 px-3 py-2 md:gap-3 md:px-4">
+          <span className="flex shrink-0 items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            <span className="text-[13px] font-semibold tracking-tight text-ink">Prudence</span>
+          </span>
           <GoalField />
           <button
             onClick={openSettings}
-            className="max-w-24 shrink-0 truncate rounded border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:border-white/25 hover:text-white md:max-w-48"
+            className="flex h-6 max-w-24 shrink-0 items-center gap-1.5 truncate rounded px-1.5 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink md:max-w-48"
             title="Model settings"
           >
-            {provider ? provider.label : 'no model'}
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${provider ? 'bg-accent' : 'bg-ink-3'}`}
+            />
+            <span className="truncate">{provider ? provider.label : 'no model'}</span>
           </button>
-          <div className="hidden items-center gap-2 md:flex">
-            {actions}
-            <span className="text-[11px] text-white/30">{countNodes(project.root)} nodes</span>
-          </div>
+          <div className="hidden items-center gap-0.5 md:flex">{actions}</div>
+          <span className="hidden shrink-0 text-[11px] tabular-nums text-ink-3 md:inline">
+            {countNodes(project.root)} nodes
+          </span>
         </div>
 
         {/* phone: one scrollable row of chips instead of a wrapped header */}
-        <div className="flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] md:hidden">
+        <div className="no-scrollbar flex items-center gap-0.5 overflow-x-auto px-2 pb-1.5 md:hidden">
           {actions}
         </div>
       </header>
 
       {fromShared && (
-        <div className="flex items-center gap-2 border-b border-sky-400/20 bg-sky-400/5 px-3 py-1.5 text-[11px] text-sky-200/70">
+        <div className="flex items-center gap-2 border-b border-sky-400/15 bg-sky-400/5 px-3 py-1.5 text-[11px] text-sky-200/70">
           <span className="min-w-0">Opened from a shared link. Edits stay in this browser.</span>
           <button onClick={dismissShared} className="ml-auto shrink-0 text-sky-200/40 hover:text-sky-100">
             dismiss
@@ -146,7 +156,7 @@ export function App() {
         <div className="relative min-w-0 flex-1">
           {view === 'canvas' ? <Canvas /> : <Outline />}
           {!hydrated && (
-            <div className="absolute inset-x-0 bottom-3 text-center text-[11px] text-white/30">
+            <div className="absolute inset-x-0 bottom-3 text-center text-[11px] text-ink-3">
               loading…
             </div>
           )}
@@ -157,15 +167,17 @@ export function App() {
             sheetOpen ? 'flex' : 'hidden md:flex',
             // phone: a real sibling of the canvas, so the canvas shrinks and refits instead of
             // hiding nodes behind an overlay. Desktop: the usual fixed column.
-            'h-[58vh] shrink-0 flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-[#0e0e11]',
+            'h-[58vh] shrink-0 flex-col overflow-hidden rounded-t-xl border-t border-line bg-panel',
             'md:h-auto md:w-80 md:rounded-none md:border-t-0 md:border-l',
           ].join(' ')}
         >
-          <div className="flex items-center border-b border-white/10 px-1">
+          <div className="flex shrink-0 items-center gap-1 border-b border-line px-2">
             <button
               className={[
-                'px-3 py-2 text-[11px]',
-                panel === 'node' ? 'border-b border-white/40 text-white' : 'text-white/40',
+                '-mb-px border-b px-2 py-2 text-[11px] transition-colors',
+                panel === 'node'
+                  ? 'border-ink text-ink'
+                  : 'border-transparent text-ink-3 hover:text-ink-2',
               ].join(' ')}
               onClick={() => setPanel('node')}
             >
@@ -173,26 +185,28 @@ export function App() {
             </button>
             <button
               className={[
-                'px-3 py-2 text-[11px]',
-                panel === 'review' ? 'border-b border-white/40 text-white' : 'text-white/40',
+                '-mb-px flex items-center gap-1 border-b px-2 py-2 text-[11px] transition-colors',
+                panel === 'review'
+                  ? 'border-ink text-ink'
+                  : 'border-transparent text-ink-3 hover:text-ink-2',
               ].join(' ')}
               onClick={() => setPanel('review')}
             >
               Review
               {findings.length > 0 && (
-                <span className="ml-1 rounded bg-amber-400/15 px-1 text-[10px] text-amber-300">
+                <span className="rounded bg-amber-400/15 px-1 text-[10px] text-amber-300">
                   {findings.length}
                 </span>
               )}
             </button>
-            <span className="mx-auto h-1 w-10 rounded-full bg-white/15 md:hidden" />
+            <span className="mx-auto h-1 w-10 rounded-full bg-white/10 md:hidden" />
             <button
               onClick={() => {
                 select(null)
                 setSheet(false)
                 setPanel('node')
               }}
-              className="px-3 py-2 text-[13px] text-white/40 hover:text-white md:hidden"
+              className="px-2 py-2 text-[13px] text-ink-3 hover:text-ink md:hidden"
               title="Hide panel"
             >
               ×
@@ -225,7 +239,7 @@ function GoalField() {
         if (e.key === 'Enter') e.currentTarget.blur()
       }}
       placeholder="what are you deciding about?"
-      className="min-w-0 flex-1 truncate border-0 bg-transparent text-xs text-white/50 outline-none placeholder:text-white/20 focus:text-white/80"
+      className="min-w-0 flex-1 truncate border-0 bg-transparent text-[12px] text-ink-2 outline-none placeholder:text-ink-3/60 focus:text-ink"
     />
   )
 }

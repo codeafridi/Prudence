@@ -58,25 +58,25 @@ export function Settings() {
     close()
   }
 
-  const field = 'w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-xs outline-none focus:border-white/30'
+  const field = 'field'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-lg border border-white/10 bg-[#131317] p-4 text-[13px] shadow-2xl">
+      <div className="w-full max-w-md rounded-xl border border-line bg-panel p-4 text-[13px] shadow-[0_24px_64px_rgba(0,0,0,0.7)]">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold text-white">Model</h2>
-          <button onClick={close} className="text-xs text-white/40 hover:text-white">
+          <h2 className="text-[13px] font-semibold tracking-tight text-ink">Model</h2>
+          <button onClick={close} className="text-[11px] text-ink-3 transition-colors hover:text-ink">
             close
           </button>
         </div>
-        <p className="mt-1 text-[11px] text-white/35">
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-3">
           Any OpenAI-compatible endpoint. The key stays in this browser — it is never written to the
           project or an export. Leave it blank to keep a saved key.
         </p>
 
         <div className="mt-3 flex items-end gap-2">
           <label className="block min-w-0 flex-1">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">Project</span>
+            <span className="label">Project</span>
             <input
               className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-xs outline-none focus:border-white/30"
               defaultValue={projectName}
@@ -88,7 +88,7 @@ export function Settings() {
             onClick={() => {
               if (confirm('Start over? This project stays in no backup — export it first.')) newProject()
             }}
-            className="rounded border border-red-500/20 px-2 py-1.5 text-[11px] text-red-400/70 hover:border-red-500/40 hover:text-red-400"
+            className="h-7 rounded-md px-2 text-[11px] text-red-400/60 transition-colors hover:bg-red-500/10 hover:text-red-400"
           >
             Start over
           </button>
@@ -97,26 +97,26 @@ export function Settings() {
         {providers.length > 0 && (
           <ul className="mt-3 space-y-1">
             {providers.map((p) => (
-              <li key={p.id} className="flex items-center gap-2 rounded border border-white/10 px-2 py-1">
+              <li key={p.id} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white/[0.03]">
                 <input
                   type="radio"
                   checked={(activeProviderId ?? providers[0].id) === p.id}
                   onChange={() => setActiveProvider(p.id)}
                   title="Use this provider"
                 />
-                <span className="min-w-0 flex-1 truncate text-white/80">{p.label}</span>
-                <span className="shrink-0 rounded bg-white/5 px-1 text-[10px] uppercase text-white/40">
+                <span className="min-w-0 flex-1 truncate text-[12px] text-ink">{p.label}</span>
+                <span className="shrink-0 rounded bg-white/5 px-1 text-[9px] uppercase tracking-wider text-ink-3">
                   {p.tier}
                 </span>
                 <button
                   onClick={() => setDraft({ ...p, apiKey: '' })}
-                  className="text-[11px] text-white/40 hover:text-white"
+                  className="text-[11px] text-ink-3 transition-colors hover:text-ink"
                 >
                   edit
                 </button>
                 <button
                   onClick={() => removeProvider(p.id)}
-                  className="text-[11px] text-white/25 hover:text-red-400"
+                  className="text-[11px] text-ink-3/60 transition-colors hover:text-red-400"
                 >
                   ×
                 </button>
@@ -128,7 +128,7 @@ export function Settings() {
         <div className="mt-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-[10px] uppercase tracking-wider text-white/35">Label</span>
+              <span className="label">Label</span>
               <input
                 className={field}
                 value={draft.label}
@@ -137,7 +137,7 @@ export function Settings() {
               />
             </label>
             <label className="block">
-              <span className="text-[10px] uppercase tracking-wider text-white/35">Tier</span>
+              <span className="label">Tier</span>
               <select
                 className={field}
                 value={draft.tier}
@@ -150,7 +150,7 @@ export function Settings() {
           </div>
 
           <label className="block">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">Base URL</span>
+            <span className="label">Base URL</span>
             <input
               className={field}
               value={draft.baseUrl}
@@ -159,7 +159,7 @@ export function Settings() {
           </label>
 
           <label className="block">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">Model</span>
+            <span className="label">Model</span>
             <input
               className={field}
               value={draft.model}
@@ -169,7 +169,7 @@ export function Settings() {
           </label>
 
           <label className="block">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">
+            <span className="label">
               API key {editing ? '(leave blank to keep)' : ''}
             </span>
             <input
@@ -187,14 +187,14 @@ export function Settings() {
           <button
             onClick={save}
             disabled={!draft.baseUrl.trim() || !draft.model.trim()}
-            className="rounded border border-white/20 px-3 py-1 text-xs text-white hover:bg-white/10 disabled:opacity-30"
+            className="h-7 rounded-md bg-accent px-3 text-[11px] font-medium text-[#06231a] transition-colors hover:bg-accent/90 disabled:opacity-30"
           >
             {editing ? 'Save' : 'Add model'}
           </button>
           {editing && (
             <button
               onClick={() => setDraft({ ...BLANK })}
-              className="rounded border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white"
+              className="h-7 rounded-md px-3 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink"
             >
               New
             </button>
