@@ -155,8 +155,9 @@ async function requestJson<T>(
       lastError = parsed.error
       invalid = response.content
     } catch (error) {
-      // A bad key or a missing model will not be fixed by a different response format.
-      if (error instanceof ProviderError && (error.status === 401 || error.status === 403)) throw error
+      // A bad key, a missing model or an unreachable endpoint will not be fixed by a different
+      // response format — and retrying an unreachable host just makes the user wait longer.
+      if (error instanceof ProviderError && (error.status === 0 || error.status === 401 || error.status === 403)) throw error
       lastError = error instanceof Error ? error.message : String(error)
     }
   }
@@ -198,20 +199,31 @@ async function complete(
 ): Promise<CompleteResult> {
   const url = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`
 
-  const response = await fetch(url, {
-    method: 'POST',
-    signal,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${provider.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      messages,
-      temperature: 0.2,
-      ...(format ? { response_format: format } : {}),
-    }),
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${provider.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages,
+        temperature: 0.2,
+        ...(format ? { response_format: format } : {}),
+      }),
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    // fetch only rejects when the request never reached the provider: a bad base URL, no network,
+    // or a provider that sends no CORS headers. Say that instead of surfacing "Failed to fetch".
+    throw new ProviderError(
+      0,
+      `could not reach ${url} — check the base URL and your connection; if both are fine, the provider does not allow browser requests (CORS)`,
+    )
+  }
 
   if (!response.ok) {
     throw new ProviderError(response.status, `${response.status} ${(await response.text()).slice(0, 300)}`)

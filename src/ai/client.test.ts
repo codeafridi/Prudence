@@ -79,6 +79,24 @@ test('a 401 fails immediately rather than trying every format', async () => {
   assert.equal(calls, 1)
 })
 
+test('an unreachable endpoint fails once and names CORS instead of "Failed to fetch"', async () => {
+  let calls = 0
+  globalThis.fetch = async () => {
+    calls += 1
+    throw new TypeError('Failed to fetch')
+  }
+
+  await assert.rejects(
+    () => askVerdict(input),
+    (error) =>
+      error instanceof ProviderError &&
+      error.status === 0 &&
+      /could not reach/.test(error.message) &&
+      /CORS/.test(error.message),
+  )
+  assert.equal(calls, 1, 'no format retries against a host the browser cannot reach')
+})
+
 test('parseJson survives fences and chatter around the object', () => {
   assert.deepEqual(parseJson('```json\n{"a":1}\n```'), { a: 1 })
   assert.deepEqual(parseJson('here you go {"a":2} hope that helps'), { a: 2 })
