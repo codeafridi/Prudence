@@ -11,7 +11,11 @@ type Draft = {
   apiKey: string
 }
 
-/** Endpoints that answer browser requests and speak /chat/completions. Model ids are editable. */
+/**
+ * Shortcuts, not a supported list. Any endpoint that speaks POST /chat/completions works — these
+ * are just the ones whose model ids are easy to get wrong. Everything here is editable, and
+ * "other" clears the fields so a self-hosted or private gateway is one paste away.
+ */
 const PRESETS: { label: string; baseUrl: string; model: string }[] = [
   { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'openrouter/auto' },
   { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
@@ -28,12 +32,21 @@ const PRESETS: { label: string; baseUrl: string; model: string }[] = [
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     model: 'gemini-2.0-flash',
   },
+  {
+    label: 'Fireworks',
+    baseUrl: 'https://api.fireworks.ai/inference/v1',
+    model: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+  },
+  { label: 'DeepInfra', baseUrl: 'https://api.deepinfra.com/v1/openai', model: 'meta-llama/Llama-3.3-70B-Instruct' },
+  { label: 'Perplexity', baseUrl: 'https://api.perplexity.ai', model: 'sonar' },
+  { label: 'Ollama (this machine)', baseUrl: 'http://127.0.0.1:11434/v1', model: 'llama3.2' },
+  { label: 'LM Studio (this machine)', baseUrl: 'http://127.0.0.1:1234/v1', model: 'local-model' },
 ]
 
 const BLANK: Draft = {
   id: '',
   label: '',
-  baseUrl: 'https://openrouter.ai/api/v1',
+  baseUrl: '',
   model: '',
   tier: 'cheap',
   apiKey: '',
@@ -149,11 +162,16 @@ export function Settings() {
 
         <div className="space-y-2.5 px-4 pb-4 pt-4">
           <label className="block">
-            <span className="label">Known endpoint</span>
+            <span className="label">Shortcut — optional</span>
             <select
               className={field}
               value=""
               onChange={(e) => {
+                if (e.target.value === '__other__') {
+                  setDraft({ ...BLANK, baseUrl: '', label: '', model: '' })
+                  setTimeout(() => document.getElementById('base-url')?.focus(), 0)
+                  return
+                }
                 const preset = PRESETS.find((p) => p.label === e.target.value)
                 if (!preset) return
                 setDraft({
@@ -164,13 +182,18 @@ export function Settings() {
                 })
               }}
             >
-              <option value="">choose one, then paste a key…</option>
+              <option value="">any endpoint works — or pick one to fill the fields</option>
               {PRESETS.map((p) => (
                 <option key={p.label} value={p.label}>
                   {p.label}
                 </option>
               ))}
+              <option value="__other__">other / self-hosted…</option>
             </select>
+            <span className="mt-1 block font-serif text-[11px] leading-snug text-ink-3">
+              If it answers <span className="font-mono text-[10px]">POST /chat/completions</span>,
+              it works. The list is only a shortcut for model ids.
+            </span>
           </label>
 
           <div className="grid grid-cols-2 gap-2">
@@ -199,7 +222,9 @@ export function Settings() {
           <label className="block">
             <span className="label">Base URL</span>
             <input
+              id="base-url"
               className={field}
+              placeholder="https://your-endpoint/v1"
               value={draft.baseUrl}
               onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })}
             />
@@ -224,6 +249,7 @@ export function Settings() {
               type="password"
               autoComplete="off"
               spellCheck={false}
+              placeholder="paste the key — it stays in this browser"
               value={draft.apiKey}
               onChange={(e) => setDraft({ ...draft, apiKey: e.target.value })}
             />
@@ -234,6 +260,11 @@ export function Settings() {
           <button
             onClick={save}
             disabled={!draft.baseUrl.trim() || !draft.model.trim()}
+            title={
+              !draft.baseUrl.trim() || !draft.model.trim()
+                ? 'Fill a base URL and a model id first'
+                : 'Save this endpoint'
+            }
             className="border border-ink bg-ink px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-sheet transition-colors hover:bg-ink/90 disabled:opacity-30"
           >
             {editing ? 'Save' : 'Add model'}
