@@ -3,6 +3,7 @@ import { askExpand, askGrill, askPremortem, askVerdict } from '../ai/client'
 import { buildAsk, buildExpand, buildGrill, buildPremortem } from '../ai/prompts'
 import { demoProject } from '../demo'
 import { getKey, setKey } from '../lib/keys'
+import { getActiveProvider, setActiveProvider as rememberProvider } from '../lib/prefs'
 import { loadProject, scheduleSave } from '../lib/storage'
 import { contextHash } from '../model/hash'
 import { readShareHash, decodeProject } from '../lib/share'
@@ -36,7 +37,8 @@ type Store = {
   activeProviderId: string | null
   settingsOpen: boolean
   askingId: string | null
-  askError: string | null
+  /** Scoped to the node it happened on: a failure must not follow you to another decision. */
+  askError: { nodeId: string; message: string } | null
 
   hydrate: () => Promise<void>
   select: (id: string | null) => void
@@ -134,13 +136,19 @@ export const useStore = create<Store>((set, get) => {
     return { provider, apiKey }
   }
 
+  /** Attach the failure to the node that asked, so it cannot surface on a different one. */
+  const fail = (nodeId: string, error: unknown): void =>
+    set({
+      askError: { nodeId, message: error instanceof Error ? error.message : String(error) },
+    })
+
   return {
     project: demoProject,
     selectedId: demoProject.root.id,
     past: [],
     future: [],
     hydrated: false,
-    activeProviderId: null,
+    activeProviderId: getActiveProvider(),
     settingsOpen: false,
     askingId: null,
     askError: null,
@@ -303,19 +311,28 @@ export const useStore = create<Store>((set, get) => {
         : [...s.project.providers, provider]
 
       commitProject({ ...s.project, providers })
-      if (!get().activeProviderId) set({ activeProviderId: provider.id })
+      if (!get().activeProviderId) {
+        rememberProvider(provider.id)
+        set({ activeProviderId: provider.id })
+      }
     },
 
     removeProvider: (id) => {
       const s = get()
       setKey(id, '')
-      set({
-        project: { ...s.project, providers: s.project.providers.filter((p) => p.id !== id) },
-        activeProviderId: s.activeProviderId === id ? null : s.activeProviderId,
-      })
+      // Through commitProject, so the removal is autosaved and undoable — writing `set` directly
+      // left the provider in IndexedDB and it came back on reload.
+      commitProject({ ...s.project, providers: s.project.providers.filter((p) => p.id !== id) })
+      if (s.activeProviderId === id) {
+        rememberProvider(null)
+        set({ activeProviderId: null })
+      }
     },
 
-    setActiveProvider: (id) => set({ activeProviderId: id }),
+    setActiveProvider: (id) => {
+      rememberProvider(id)
+      set({ activeProviderId: id })
+    },
 
     decide: (id, choice, rationale) => {
       const node = findNode(get().project.root, id)
@@ -431,7 +448,7 @@ export const useStore = create<Store>((set, get) => {
 
       const resolved = resolveProvider()
       if ('error' in resolved) {
-        set({ askError: resolved.error })
+        fail(nodeId, resolved.error)
         return
       }
       const { provider, apiKey } = resolved
@@ -465,7 +482,7 @@ export const useStore = create<Store>((set, get) => {
           })),
         )
       } catch (error) {
-        set({ askError: error instanceof Error ? error.message : String(error) })
+        fail(nodeId, error)
       } finally {
         set({ askingId: null })
       }
@@ -477,7 +494,7 @@ export const useStore = create<Store>((set, get) => {
 
       const resolved = resolveProvider()
       if ('error' in resolved) {
-        set({ askError: resolved.error })
+        fail(nodeId, resolved.error)
         return
       }
       const { provider, apiKey } = resolved
@@ -499,7 +516,7 @@ export const useStore = create<Store>((set, get) => {
           })),
         )
       } catch (error) {
-        set({ askError: error instanceof Error ? error.message : String(error) })
+        fail(nodeId, error)
       } finally {
         set({ premortemId: null })
       }
@@ -537,7 +554,7 @@ export const useStore = create<Store>((set, get) => {
 
       const resolved = resolveProvider()
       if ('error' in resolved) {
-        set({ askError: resolved.error })
+        fail(nodeId, resolved.error)
         return
       }
       const { provider, apiKey } = resolved
@@ -563,7 +580,7 @@ export const useStore = create<Store>((set, get) => {
           ),
         )
       } catch (error) {
-        set({ askError: error instanceof Error ? error.message : String(error) })
+        fail(nodeId, error)
       } finally {
         set({ grillingId: null })
       }
@@ -576,7 +593,7 @@ export const useStore = create<Store>((set, get) => {
 
       const resolved = resolveProvider()
       if ('error' in resolved) {
-        set({ askError: resolved.error })
+        fail(nodeId, resolved.error)
         return
       }
       const { provider, apiKey } = resolved
@@ -603,7 +620,7 @@ export const useStore = create<Store>((set, get) => {
           })),
         )
       } catch (error) {
-        set({ askError: error instanceof Error ? error.message : String(error) })
+        fail(nodeId, error)
       } finally {
         set({ expandingId: null })
       }

@@ -69,7 +69,8 @@ function VerdictSection({ node }: { node: Decision }) {
   const project = useStore((s) => s.project)
   const ask = useStore((s) => s.ask)
   const asking = useStore((s) => s.askingId) === node.id
-  const askError = useStore((s) => s.askError)
+  // Only this node's failure: an error on another decision must not show up here.
+  const askError = useStore((s) => (s.askError?.nodeId === node.id ? s.askError.message : null))
   const openSettings = useStore((s) => s.openSettings)
   const promoteUnknown = useStore((s) => s.promoteUnknown)
   const grill = useStore((s) => s.grill)

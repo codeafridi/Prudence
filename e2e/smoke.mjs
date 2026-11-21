@@ -140,6 +140,26 @@ try {
   assert(errors.length === 0, errors.join('\n'))
   ok('first provider saved, app still renders')
 
+  // Regression: removeProvider wrote state directly, so the removal was never autosaved and the
+  // provider came back on the next reload.
+  step('remove the provider and reload')
+  await page.getByRole('button', { name: 'smoke-model', exact: true }).click()
+  await page.waitForSelector('text=Base URL')
+  await page.locator('li', { hasText: 'smoke-model' }).getByRole('button', { name: '×', exact: true }).click()
+  await page.getByRole('button', { name: 'close', exact: true }).click()
+  await page.waitForTimeout(400)
+  assert((await page.textContent('body')).includes('no model'), 'provider is gone from the UI')
+  await page.waitForTimeout(700) // past the 500 ms autosave debounce
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForTimeout(900)
+  assert((await page.textContent('body')).includes('no model'), 'removal survives a reload')
+  assert(!(await page.textContent('body')).includes('smoke-model'), 'provider did not come back')
+  ok('removed provider stays removed')
+
+  // The reload reset the panel, so the export below needs the review tab again.
+  await page.getByRole('button', { name: /^Review/ }).click()
+  await page.waitForTimeout(300)
+
   step('export the decision log')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
