@@ -125,6 +125,21 @@ try {
   assert(review.includes('Nothing to flag') || review.includes('Export'), 'review panel renders')
   ok('review panel renders')
 
+  // Regression: the provider selector used to call useStore twice behind a `??`, so saving the
+  // first provider changed the hook count mid-render and React blanked the whole app.
+  step('add a model provider')
+  await page.getByRole('button', { name: 'no model', exact: true }).click()
+  await page.waitForSelector('text=Base URL')
+  await page.getByLabel('Base URL', { exact: true }).fill('http://127.0.0.1:9/v1')
+  await page.getByLabel('Model', { exact: true }).fill('smoke-model')
+  await page.getByLabel(/API key/i).fill('smoke-key')
+  await page.getByRole('button', { name: 'Add model', exact: true }).click()
+  await page.waitForTimeout(500)
+  assert((await page.locator('button').count()) > 0, 'saving the first provider must not blank the app')
+  assert((await page.textContent('body')).includes('Prudence'), 'shell survives saving a provider')
+  assert(errors.length === 0, errors.join('\n'))
+  ok('first provider saved, app still renders')
+
   step('export the decision log')
   const [download] = await Promise.all([
     page.waitForEvent('download'),

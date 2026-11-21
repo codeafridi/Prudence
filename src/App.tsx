@@ -32,9 +32,11 @@ export function App() {
   const setSheet = useStore((s) => s.setSheet)
   const select = useStore((s) => s.select)
 
-  const provider =
-    useStore((s) => s.project.providers.find((p) => p.id === s.activeProviderId)) ??
-    useStore((s) => s.project.providers[0])
+  // One selector, one hook: `?? useStore(...)` made the second call conditional, so adding the
+  // first provider changed the hook count mid-render and blanked the app.
+  const provider = useStore(
+    (s) => s.project.providers.find((p) => p.id === s.activeProviderId) ?? s.project.providers[0],
+  )
 
   const findings = useMemo(() => lint(project), [project])
 
