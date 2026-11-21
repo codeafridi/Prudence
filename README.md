@@ -106,13 +106,15 @@ and the hash is never sent over the network. The recipient gets the same log, un
 intact, and can fork it into their own browser.
 
 Export produces `DECISIONS.md`: the path you took, each fork, what you rejected, and where the
-model's probability disagreed with yours.
+model's probability disagreed with yours. There is also a printable copy — one self-contained HTML
+file with the same Form 1 layout, fonts inlined, no network and A4 page rules — so a record can be
+handed to someone who does not have the app. The branch you did not take stays labelled.
 
 ## Status
 
 Early, but the whole loop works: canvas, tree editing, undo, autosave, ask + verdicts, grill,
 expand, premortem, decide/park/reopen, probability override, scheduled retrospectives,
-deterministic review, markdown/JSON export.
+deterministic review, markdown/JSON export, and a standalone printable record.
 Not yet: mobile layout, real-time collaboration (that needs a server, which is a different product
 decision).
 
@@ -145,6 +147,10 @@ Static output in `dist/` — deploy to any static host. No env vars, no server, 
 GitHub Pages: push to `main` with `.github/workflows/pages.yml`, then enable
 *Settings → Pages → Source: GitHub Actions* once. Asset paths are relative, so it also works from
 a subpath, Netlify, Vercel or `python -m http.server dist`.
+
+## Notes
+
+What broke and why, when it did: https://codeafridi.github.io/blog/
 
 ## License
 
