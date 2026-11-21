@@ -2,8 +2,8 @@ import dagre from 'dagre'
 import type { Edge } from '@xyflow/react'
 import type { Decision } from '../model/types'
 
-export const NODE_W = 260
-export const NODE_H = 96
+export const NODE_W = 300
+export const NODE_H = 150
 
 type Placed = { decision: Decision }
 

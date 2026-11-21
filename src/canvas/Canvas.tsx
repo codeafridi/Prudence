@@ -1,5 +1,6 @@
 import {
   Background,
+  BackgroundVariant,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -95,7 +96,7 @@ function Flow() {
       proOptions={{ hideAttribution: true }}
       nodesConnectable={false}
     >
-      <Background gap={28} color="#15171b" />
+      <Background variant={BackgroundVariant.Lines} gap={28} color="#1b1a1710" />
       <Controls showInteractive={false} />
     </ReactFlow>
   )

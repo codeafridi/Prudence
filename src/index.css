@@ -1,23 +1,81 @@
 @import "tailwindcss";
 
 /*
- * One palette, one accent. Surfaces step by luminance, structure comes from hairlines, and the
- * only chromatic colours are semantic: emerald = decided / primary, amber = needs attention,
- * red = risk, sky = assumption. Everything else is white at an opacity.
- *
- * No CDN fonts (AGENTS.md: no third-party requests), so the type is the system UI stack.
+ * Form 1 — a decision record, not a dashboard.
+ * The sheet is paper, the structure is hairlines and clause numbers, the only colour is the
+ * stamp red used on a filed decision. Fonts are self-hosted (AGENTS.md forbids third-party
+ * requests); they live in src/assets/fonts and Vite emits them same-origin.
  */
+
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./assets/fonts/newsreader-normal-400_600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./assets/fonts/newsreader-normal-400_600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: italic;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("./assets/fonts/newsreader-italic-400_500-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/ibm-plex-mono-normal-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/ibm-plex-mono-normal-500-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./assets/fonts/ibm-plex-mono-normal-600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
-  --color-canvas: #08090a;
-  --color-panel: #0d0e10;
-  --color-card: #14161a;
-  --color-card-hi: #1a1d22;
-  --color-line: #ffffff0f;
-  --color-line-hi: #ffffff1f;
-  --color-ink: #f2f3f5;
-  --color-ink-2: #a9aeb6;
-  --color-ink-3: #7b8088;
-  --color-accent: #34d399;
+  --color-desk: #e2dccb;
+  --color-sheet: #faf7ee;
+  --color-ink: #1b1a17;
+  --color-ink-2: #46423b;
+  --color-ink-3: #6d675c;
+  --color-rule: #1b1a1726;
+  --color-rule-soft: #1b1a1714;
+  --color-stamp: #9d3627;
+  --color-pencil: #a9482f;
+
+  --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 html,
@@ -28,100 +86,129 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-canvas);
+  background: var(--color-desk);
   color: var(--color-ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-feature-settings: "cv01", "ss03", "tnum";
+  font-family: var(--font-serif);
+  font-feature-settings: "kern", "liga", "onum";
   -webkit-font-smoothing: antialiased;
 }
 
-/* One micro-label for every section header, instead of three casings. */
+/* paper grain — a flat fill reads as a web page, grain reads as stock */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E");
+}
+
+/* ---------------- form vocabulary ---------------- */
+
 @utility label {
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.1em;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  line-height: 1.2;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-ink-3);
 }
 
-/* A field that does not shout: no border until focus. */
-@utility field {
+/* A filed decision is stamped, not badged. */
+@utility stamp {
+  display: inline-block;
+  border: 1.5px solid var(--color-stamp);
+  color: var(--color-stamp);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 6px 2px;
+  transform: rotate(-1.2deg);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+@utility stamp-open {
+  display: inline-block;
+  border: 1px dashed var(--color-ink-3);
+  color: var(--color-ink-3);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 6px 2px;
+  transform: rotate(-0.5deg);
+  white-space: nowrap;
+}
+
+/* A field is a ruled line you write on, not a filled box. */
+@utility rule-field {
   width: 100%;
-  border-radius: 6px;
-  background: #ffffff08;
-  padding: 6px 8px;
-  font-size: 12px;
-  line-height: 1.45;
+  border: 0;
+  border-bottom: 1px solid var(--color-rule);
+  background: transparent;
+  padding: 5px 1px;
+  font-size: 12.5px;
+  line-height: 1.55;
   color: var(--color-ink);
   outline: none;
-  transition: background 120ms, box-shadow 120ms;
+  transition: border-color 120ms;
 }
-@utility field-focus {
-  background: #ffffff0d;
-  box-shadow: 0 0 0 1px var(--color-accent);
-}
-
-input.field::placeholder,
-textarea.field::placeholder {
-  color: var(--color-ink-3);
-}
-input.field:focus,
-textarea.field:focus {
-  background: #ffffff0d;
-  box-shadow: 0 0 0 1px #34d39966;
+input.rule-field:focus,
+textarea.rule-field:focus {
+  border-bottom-color: var(--color-stamp);
 }
 
-/* React Flow ships a light control cluster; paint it into the palette. */
+/* ---------------- canvas on paper ---------------- */
+
+/* React Flow 13 defaults to a dark canvas; the sheet is the background. */
+.react-flow {
+  --xy-background-color: var(--color-sheet);
+  --xy-background-pattern-color-props: #1b1a1710;
+  background: var(--color-sheet);
+}
+
 .react-flow__controls {
   margin: 12px;
-  box-shadow: 0 8px 24px #00000066;
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
+  box-shadow: none;
+  border: 1px solid var(--color-rule);
+  border-radius: 0;
   overflow: hidden;
 }
 .react-flow__controls-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-card);
-  border-bottom: 1px solid var(--color-line);
+  width: 26px;
+  height: 26px;
+  background: var(--color-sheet);
+  border-bottom: 1px solid var(--color-rule-soft);
   color: var(--color-ink-2);
 }
-.react-flow__controls-button:last-child {
-  border-bottom: 0;
-}
-.react-flow__controls-button svg {
-  max-width: 14px;
-  max-height: 14px;
-}
 .react-flow__controls-button:hover {
-  background: var(--color-card-hi);
+  background: #efe9da;
   color: var(--color-ink);
 }
 .react-flow__controls-button svg {
   fill: currentColor;
+  max-width: 13px;
+  max-height: 13px;
 }
-.react-flow__edge-text {
-  font-variant-numeric: tabular-nums;
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
 }
-/* Handles are edge anchors, not controls: hide the ones that carry no signal at rest. */
 .react-flow__handle {
+  opacity: 0;
   transition: opacity 120ms;
 }
-.react-flow__handle-left,
-.react-flow__handle-top {
-  opacity: 0;
-}
-.react-flow__node:hover .react-flow__handle-left,
-.react-flow__node.selected .react-flow__handle-left,
-.react-flow__node:hover .react-flow__handle-top,
-.react-flow__node.selected .react-flow__handle-top {
-  opacity: 0.7;
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node.selected .react-flow__handle {
+  opacity: 0.8;
 }
 
-/* Horizontal chip rows scroll without advertising a scrollbar. */
 .no-scrollbar {
   scrollbar-width: none;
 }
@@ -129,10 +216,10 @@ textarea.field:focus {
   display: none;
 }
 
-/* The browser's default scrollbar is the one light-mode thing left on the page. */
+/* light scrollbars to match the stock */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #ffffff1f transparent;
+  scrollbar-color: #1b1a1733 transparent;
 }
 ::-webkit-scrollbar {
   width: 10px;
@@ -145,8 +232,8 @@ textarea.field:focus {
   background-clip: content-box;
   border: 3px solid transparent;
   border-radius: 999px;
-  background-color: #ffffff1f;
+  background-color: #1b1a1733;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #ffffff33;
+  background-color: #1b1a1755;
 }

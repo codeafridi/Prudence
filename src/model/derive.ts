@@ -3,6 +3,7 @@ import { layout } from '../canvas/layout'
 import { recommendedPath } from './ev'
 import { decisionFlags, exploredLabel, type DecisionFlags } from './flags'
 import { contextHash } from './hash'
+import { clauseNumbers } from './numbering'
 import type { Decision, Project } from './types'
 
 /**
@@ -21,6 +22,8 @@ export type DecisionNodeData = {
   stale: boolean
   /** Sits on the max-sum chain recommendedPath() picked (§6). */
   onPath: boolean
+  /** Clause number in the record: 1, 1.1, 1.2.1. Derived, never stored. */
+  clause: string
 }
 
 export type DecisionNode = Node<DecisionNodeData>
@@ -53,6 +56,7 @@ function truncateLabel(text: string, max = 30): string {
 export function derive(project: Project): Derived {
   const entries = flatten(project.root)
   const path = new Set(recommendedPath(project.root))
+  const clauses = clauseNumbers(project.root)
 
   const edges: Edge[] = []
   for (const { decision, parent, abandoned } of entries) {
@@ -71,14 +75,14 @@ export function derive(project: Project): Derived {
       label: truncateLabel(
         via.kind === 'option' ? via.option : via.kind === 'risk' ? 'risk' : 'assumed',
       ),
-      labelStyle: { fill: abandoned ? '#5b5f66' : '#b4b8bf', fontSize: 10, fontWeight: 500 },
-      labelBgStyle: { fill: '#0d0e10', fillOpacity: 0.9 },
+      labelStyle: { fill: abandoned ? '#a39d90' : '#6b6559', fontSize: 9, fontFamily: 'IBM Plex Mono' },
+      labelBgStyle: { fill: '#faf7ee', fillOpacity: 0.95 },
       labelBgPadding: [3, 2] as [number, number],
       style: abandoned
-        ? { stroke: '#33363c', strokeDasharray: '4 4', opacity: 0.6 }
+        ? { stroke: '#b3ac9d', strokeDasharray: '3 3', strokeWidth: 1 }
         : onPath
-          ? { stroke: '#34d399', strokeWidth: 1.5 }
-          : { stroke: '#3a3d44' },
+          ? { stroke: '#a9482f', strokeWidth: 1.4, strokeOpacity: 0.85 }
+          : { stroke: '#a9482f', strokeWidth: 1, strokeOpacity: 0.5 },
     })
   }
 
@@ -94,7 +98,7 @@ export function derive(project: Project): Derived {
       type: 'decision',
       // A hand-placed node keeps its position; everything else follows dagre (Tidy clears `pos`).
       position: decision.pos ?? computed[decision.id],
-      style: { opacity: abandoned ? 0.5 : 1 },
+      style: { opacity: abandoned ? 0.55 : 1 },
       data: {
         decision,
         flags: decisionFlags(decision, parent, abandoned),
@@ -102,6 +106,7 @@ export function derive(project: Project): Derived {
         stale,
         recommended,
         onPath: path.has(decision.id),
+        clause: clauses.get(decision.id) ?? '1',
       },
     }
   })

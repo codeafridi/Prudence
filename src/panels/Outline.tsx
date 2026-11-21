@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { derive } from '../model/derive'
+import { clauseNumbers } from '../model/numbering'
 import type { Decision } from '../model/types'
 import { useStore } from '../state/store'
 
 /**
- * The list view. The canvas stops scaling before the data does, so the same tree gets a second
- * reading mode: indentation instead of space, keyboard-friendly, no panning.
+ * The list view. The canvas stops scaling before the data does, so the same record gets a second
+ * reading mode: indentation and clause numbers instead of space, keyboard-friendly, no panning.
  */
 export function Outline() {
   const project = useStore((s) => s.project)
@@ -19,6 +20,8 @@ export function Outline() {
     return map
   }, [project])
 
+  const clauses = useMemo(() => clauseNumbers(project.root), [project])
+
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const rows: { node: Decision; depth: number }[] = []
@@ -30,23 +33,24 @@ export function Outline() {
   walk(project.root, 0)
 
   return (
-    <div className="h-full overflow-y-auto p-3 text-[13px]">
+    <div className="h-full overflow-y-auto px-4 py-3 md:px-9 md:py-5">
       {rows.map(({ node, depth }) => {
         const nodeData = data.get(node.id)
         const nodeFlags = nodeData?.flags
         const abandoned = nodeFlags?.abandoned ?? false
         const hasChildren = node.children.length > 0
         const isCollapsed = collapsed.has(node.id)
+        const selected = node.id === selectedId
 
         return (
           <div
             key={node.id}
             className={[
-              'group flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors',
-              node.id === selectedId ? 'bg-accent/10' : 'hover:bg-white/[0.04]',
-              abandoned ? 'opacity-50' : '',
+              'group flex items-baseline gap-2 border-b border-rule-soft py-1.5 last:border-0',
+              selected ? 'bg-[#efe9da]' : '',
+              abandoned ? 'opacity-55' : '',
             ].join(' ')}
-            style={{ paddingLeft: `${depth * 18 + 4}px` }}
+            style={{ paddingLeft: `${depth * 22}px` }}
           >
             <button
               onClick={() =>
@@ -58,41 +62,46 @@ export function Outline() {
                 })
               }
               disabled={!hasChildren}
-              className="w-4 shrink-0 text-[10px] text-ink-3 hover:text-ink disabled:opacity-0"
+              className="w-3 shrink-0 text-[9px] text-ink-3 hover:text-ink disabled:opacity-0"
               title={isCollapsed ? 'Expand' : 'Collapse'}
             >
               {isCollapsed ? '▸' : '▾'}
             </button>
 
-            <span
-              className={[
-                'h-1.5 w-1.5 shrink-0 rounded-full',
-                node.state === 'decided'
-                  ? 'bg-accent'
-                  : node.state === 'asked'
-                    ? 'bg-amber-400'
-                    : node.state === 'parked'
-                      ? 'bg-slate-500'
-                      : 'bg-ink-3',
-              ].join(' ')}
-            />
+            <span className={['w-10 shrink-0 text-right font-mono text-[10px]', selected ? 'text-stamp' : 'text-ink-3'].join(' ')}>
+              {clauses.get(node.id)}
+            </span>
 
             <button
               onClick={() => requestFocus(node.id)}
-              className="min-w-0 flex-1 truncate text-left text-[12px] text-ink"
+              className={[
+                'min-w-0 flex-1 text-left font-serif text-[14px] leading-snug line-clamp-2 md:line-clamp-1',
+                node.state === 'decided' ? 'text-ink' : 'text-ink-2',
+                abandoned ? 'line-through decoration-1' : '',
+              ].join(' ')}
             >
               {node.question}
             </button>
 
-            {nodeFlags?.atRisk && <span className="shrink-0 text-[10px] text-red-400">risk</span>}
-            {nodeData?.stale && <span className="shrink-0 text-[10px] text-amber-400">stale</span>}
+            {nodeFlags?.atRisk && (
+              <span className="shrink-0 font-mono text-[8px] uppercase tracking-[0.12em] text-stamp">
+                at risk
+              </span>
+            )}
+            {nodeData?.stale && (
+              <span className="shrink-0 font-mono text-[8px] uppercase tracking-[0.12em] text-stamp">
+                stale
+              </span>
+            )}
             {nodeFlags?.premature && (
-              <span className="shrink-0 text-[10px] text-ink-3">premature</span>
+              <span className="shrink-0 font-mono text-[8px] uppercase tracking-[0.12em] text-ink-3">
+                premature
+              </span>
             )}
 
             {node.choice && (
-              <span className="max-w-40 shrink-0 truncate text-[11px] text-accent/80">
-                → {node.choice}
+              <span className="max-w-44 shrink-0 truncate font-mono text-[9px] uppercase tracking-[0.08em] text-stamp">
+                {node.choice}
               </span>
             )}
           </div>

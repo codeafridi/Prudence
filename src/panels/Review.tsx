@@ -37,15 +37,18 @@ export function Review() {
     }
   }
 
+  const command =
+    'w-full text-left font-mono text-[9px] uppercase tracking-[0.14em] text-ink-3 transition-colors hover:text-ink'
+
   return (
-    <div className="flex flex-1 flex-col overflow-hidden text-[12px]">
-      <div className="flex-1 overflow-y-auto p-3">
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-3 md:px-5">
         {findings.length === 0 ? (
-          <p className="mt-16 px-4 text-center text-[12px] leading-relaxed text-ink-3">
-            Nothing to flag. The tree is consistent with itself.
+          <p className="mt-20 px-2 text-center font-serif text-[14px] italic leading-relaxed text-ink-3">
+            Nothing to flag. The record is consistent with itself.
           </p>
         ) : (
-          <ul className="space-y-1">
+          <ul>
             {findings.map((finding, i) => (
               <li key={`${finding.rule}-${finding.nodeId}-${i}`}>
                 <button
@@ -53,12 +56,10 @@ export function Review() {
                     select(finding.nodeId)
                     setPanel('node')
                   }}
-                  className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
+                  className="w-full border-b border-rule-soft py-2 text-left transition-colors last:border-0 hover:text-stamp"
                 >
-                  <span className="label block !text-[9px] text-amber-400/80">
-                    {LABEL[finding.rule]}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-2">
+                  <span className="label block">{LABEL[finding.rule]}</span>
+                  <span className="mt-1 block font-serif text-[12px] leading-[1.5] text-ink-2">
                     {finding.detail}
                   </span>
                 </button>
@@ -68,13 +69,13 @@ export function Review() {
         )}
       </div>
 
-      <div className="space-y-1 border-t border-line p-3">
+      <div className="space-y-2 border-t border-ink px-4 py-3 md:px-5">
         <span className="label">Export</span>
         <button
           onClick={() =>
             download(`${slugify(project.name)}-decisions.md`, exportMarkdown(project))
           }
-          className="h-7 w-full rounded-md bg-accent px-2 text-[11px] font-medium text-[#06231a] transition-colors hover:bg-accent/90"
+          className="w-full border border-ink bg-ink px-2 py-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-sheet transition-colors hover:bg-ink/90"
         >
           Decision log (.md)
         </button>
@@ -82,13 +83,13 @@ export function Review() {
           onClick={() => {
             download(`${slugify(project.name)}.json`, exportJson(project), 'application/json')
           }}
-          className="h-7 w-full rounded-md px-2 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink"
+          className={command}
         >
           Project (.json)
         </button>
         <button
           onClick={() => void copyShare()}
-          className="h-7 w-full rounded-md px-2 text-[11px] text-ink-2 transition-colors hover:bg-white/5 hover:text-ink"
+          className={command}
           title="A read-only copy of this tree, encoded in the URL — no server involved"
         >
           {share === 'copied'
@@ -97,7 +98,7 @@ export function Review() {
               ? 'clipboard blocked — use the file'
               : 'Copy share link'}
         </button>
-        <p className="pt-1 text-[10px] leading-relaxed text-ink-3/70">
+        <p className="pt-1 font-serif text-[10.5px] leading-[1.5] text-ink-3">
           Keys never leave this browser, so neither the file nor the link can contain one.
         </p>
       </div>
