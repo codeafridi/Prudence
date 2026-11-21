@@ -3,6 +3,7 @@ import { Canvas } from './canvas/Canvas'
 import { lint } from './model/lint'
 import { clauseNumbers } from './model/numbering'
 import type { Decision } from './model/types'
+import { downloadRecord } from './export/export.ts'
 import { Examples } from './panels/Examples'
 import { Finder } from './panels/Finder'
 import { Inspector } from './panels/Inspector'
@@ -114,6 +115,13 @@ export function App() {
       </button>
       <button onClick={tidy} className={cmd} title="Lay the record out again">
         tidy
+      </button>
+      <button
+        onClick={() => void downloadRecord(project)}
+        className={cmd}
+        title="Save a standalone, printable copy of this record"
+      >
+        export
       </button>
     </>
   )
