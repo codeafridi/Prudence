@@ -172,29 +172,29 @@ function VerdictCard({
         <span className="min-w-0 flex-1 font-serif text-[14px] leading-snug">{verdict.pick}</span>
         {stale && <span className="label !text-stamp">stale</span>}
       </p>
-      <p className="mt-1.5 font-serif text-[12.5px] leading-[1.6] text-ink-2">{verdict.why}</p>
+      <p className="mt-2 font-serif text-[12.5px] leading-[1.65] text-ink-2">{verdict.why}</p>
 
-      <ul className="mt-2.5 space-y-1.5">
+      <ul className="mt-3.5 space-y-2.5 border-t border-rule-soft pt-3">
         {verdict.perOption.map((c) => (
           <li key={c.option}>
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-baseline justify-between gap-3">
               <span className="min-w-0 truncate font-mono text-[9.5px] text-ink-2">{c.option}</span>
-              <span className="shrink-0 font-mono text-[9px] tabular-nums text-ink-3">
-                p {c.p.toFixed(2)} · {c.reversible ? 'reversible' : 'one-way'}
+              <span className="w-[92px] shrink-0 text-right font-mono text-[9px] tabular-nums text-ink-3">
+                {c.p.toFixed(2)} · {c.reversible ? 'reversible' : 'one-way'}
               </span>
             </div>
-            <p className="font-serif text-[11.5px] leading-snug text-ink-3">{c.outcome}</p>
+            <p className="mt-0.5 font-serif text-[11.5px] leading-[1.45] text-ink-3">{c.outcome}</p>
           </li>
         ))}
       </ul>
 
-      <p className="mt-2.5 border-t border-rule-soft pt-2 font-serif text-[12px] leading-[1.6] text-ink-2">
-        <span className="label mr-1">flip if</span>
+      <p className="mt-3.5 border-t border-rule-soft pt-3 font-serif text-[12px] leading-[1.6] text-ink-2">
+        <span className="label mr-2">flip if</span>
         {verdict.flipIf}
       </p>
 
       {verdict.counter ? (
-        <div className="mt-2 border-t border-rule-soft pt-2">
+        <div className="mt-3.5 border-t border-rule-soft pt-3">
           <span className="label !text-stamp">against</span>
           <p className="mt-1 font-serif text-[12px] leading-[1.6] text-ink-2">
             {verdict.counter.why}
@@ -216,7 +216,7 @@ function VerdictCard({
       )}
 
       {verdict.unknowns.length > 0 && (
-        <ul className="mt-2 space-y-1 border-t border-rule-soft pt-2">
+        <ul className="mt-3.5 space-y-1.5 border-t border-rule-soft pt-3">
           {verdict.unknowns.map((u) => (
             <li key={u} className="group flex items-start gap-1">
               <span className="min-w-0 flex-1 font-serif text-[11.5px] leading-snug text-ink-2">
@@ -235,7 +235,7 @@ function VerdictCard({
         </ul>
       )}
 
-      <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.14em] text-ink-3">
+      <p className="mt-3.5 border-t border-rule-soft pt-2 font-mono text-[8px] uppercase tracking-[0.14em] text-ink-3">
         {verdict.model} · {(verdict.tokens.in + verdict.tokens.out).toLocaleString()} tokens
       </p>
     </div>
@@ -261,10 +261,10 @@ function DecisionSection({ node }: { node: Decision }) {
 
   return (
     <Note title={decided ? 'Filed decision' : 'Decide'}>
-      <ul className="space-y-px">
+      <ul className="space-y-0.5">
         {node.options.map((option) => (
           <li key={option}>
-            <label className="flex cursor-pointer items-baseline gap-2 py-1 font-mono text-[10.5px] text-ink-2">
+            <label className="flex cursor-pointer items-baseline gap-2 py-1.5 font-mono text-[10.5px] text-ink-2">
               <input
                 type="radio"
                 name={`choice-${node.id}`}
@@ -285,10 +285,10 @@ function DecisionSection({ node }: { node: Decision }) {
         onChange={(e) => setRationale(e.target.value)}
         rows={2}
         placeholder="Why — one line. Required."
-        className="rule-field mt-2 resize-none font-serif"
+        className="rule-field mt-3.5 resize-none font-serif"
       />
 
-      <div className="mt-2.5 flex items-center gap-3">
+      <div className="mt-3.5 flex items-center gap-3">
         {(!decided || dirty) && (
           <button
             onClick={() => decide(node.id, choice, rationale)}
