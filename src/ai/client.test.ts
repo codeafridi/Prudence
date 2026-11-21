@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { askVerdict, parseJson, pickTier, ProviderError } from './client.ts'
+import { askVerdict, endpointUrl, parseJson, pickTier, ProviderError } from './client.ts'
 import type { Decision } from '../model/types.ts'
 
 const originalFetch = globalThis.fetch
@@ -95,6 +95,54 @@ test('an unreachable endpoint fails once and names CORS instead of "Failed to fe
       /CORS/.test(error.message),
   )
   assert.equal(calls, 1, 'no format retries against a host the browser cannot reach')
+})
+
+
+test('endpointUrl accepts a base URL or the whole path', () => {
+  assert.equal(endpointUrl('https://api.openai.com/v1'), 'https://api.openai.com/v1/chat/completions')
+  assert.equal(endpointUrl('https://api.openai.com/v1/'), 'https://api.openai.com/v1/chat/completions')
+  assert.equal(
+    endpointUrl(' https://api.openai.com/v1/chat/completions '),
+    'https://api.openai.com/v1/chat/completions',
+  )
+})
+
+test('a 404 stops immediately — wrong base URL or wrong model, not a format problem', async () => {
+  let calls = 0
+  globalThis.fetch = async () => {
+    calls += 1
+    return new Response('model not found', { status: 404 })
+  }
+
+  await assert.rejects(
+    () => askVerdict(input),
+    (error) => error instanceof ProviderError && error.status === 404,
+  )
+  assert.equal(calls, 1)
+})
+
+test('a 429 is retried rather than surfaced', async () => {
+  let calls = 0
+  globalThis.fetch = async () => {
+    calls += 1
+    return calls === 1 ? new Response('rate limited', { status: 429 }) : reply(JSON.stringify(VALID))
+  }
+
+  const result = await askVerdict(input)
+  assert.equal(result.verdict.pick, 'a')
+  assert.equal(calls, 2, 'one retry after the throttle')
+})
+
+test('no temperature is sent — reasoning models reject anything but the default', async () => {
+  let body: Record<string, unknown> = {}
+  globalThis.fetch = async (_url, init) => {
+    body = JSON.parse(String(init?.body))
+    return reply(JSON.stringify(VALID))
+  }
+
+  await askVerdict(input)
+  assert.equal('temperature' in body, false)
+  assert.ok(body.response_format, 'the structured-output ladder still starts with a schema')
 })
 
 test('parseJson survives fences and chatter around the object', () => {

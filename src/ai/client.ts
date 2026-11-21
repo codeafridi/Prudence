@@ -149,7 +149,12 @@ async function requestJson<T>(
 
   for (const attempt of attempts(task)) {
     try {
-      const response = await complete(task.provider, attempt.messages, attempt.format, task.signal)
+      const response = await completeWithRetry(
+        task.provider,
+        attempt.messages,
+        attempt.format,
+        task.signal,
+      )
       const parsed = task.parse(parseJson(response.content))
       if (parsed.ok) return { value: parsed.value, model: task.provider.model, tokens: response.tokens }
       lastError = parsed.error
@@ -157,14 +162,18 @@ async function requestJson<T>(
     } catch (error) {
       // A bad key, a missing model or an unreachable endpoint will not be fixed by a different
       // response format — and retrying an unreachable host just makes the user wait longer.
-      if (error instanceof ProviderError && (error.status === 0 || error.status === 401 || error.status === 403)) throw error
+      if (
+        error instanceof ProviderError &&
+        (error.status === 0 || error.status === 401 || error.status === 403 || error.status === 404)
+      )
+        throw error
       lastError = error instanceof Error ? error.message : String(error)
     }
   }
 
   // One repair turn: hand the model its own invalid output plus the reason it was rejected.
   if (invalid) {
-    const repaired = await complete(
+    const repaired = await completeWithRetry(
       task.provider,
       [
         ...task.messages,
@@ -197,7 +206,7 @@ async function complete(
   format: Record<string, unknown> | undefined,
   signal?: AbortSignal,
 ): Promise<CompleteResult> {
-  const url = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`
+  const url = endpointUrl(provider.baseUrl)
 
   let response: Response
   try {
@@ -211,7 +220,6 @@ async function complete(
       body: JSON.stringify({
         model: provider.model,
         messages,
-        temperature: 0.2,
         ...(format ? { response_format: format } : {}),
       }),
     })
@@ -236,6 +244,45 @@ async function complete(
       in: body.usage?.prompt_tokens ?? 0,
       out: body.usage?.completion_tokens ?? 0,
     },
+  }
+}
+
+/** Normalise whatever the user pasted into one endpoint. Accepts the full path or just the base. */
+export function endpointUrl(baseUrl: string): string {
+  const base = baseUrl
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/chat\/completions$/i, '')
+  return `${base}/chat/completions`
+}
+
+/** Give up on a silent endpoint instead of leaving the panel on "asking…" forever. */
+function withTimeout(signal: AbortSignal | undefined, ms = 90_000): AbortSignal {
+  const timeout = AbortSignal.timeout(ms)
+  return signal && typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : timeout
+}
+
+/**
+ * Providers throttle (429) and occasionally 5xx. Retrying those is what makes "paste a key and it
+ * works" true; every other status is the ladder's business, not ours.
+ */
+async function completeWithRetry(
+  provider: ProviderCredentials,
+  messages: ChatMessage[],
+  format: Record<string, unknown> | undefined,
+  signal?: AbortSignal,
+): Promise<CompleteResult> {
+  let delay = 700
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await complete(provider, messages, format, withTimeout(signal))
+    } catch (error) {
+      const retryable =
+        error instanceof ProviderError && (error.status === 429 || error.status >= 500)
+      if (!retryable || attempt >= 2) throw error
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      delay *= 2
+    }
   }
 }
 

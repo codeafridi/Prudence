@@ -11,6 +11,25 @@ type Draft = {
   apiKey: string
 }
 
+/** Endpoints that answer browser requests and speak /chat/completions. Model ids are editable. */
+const PRESETS: { label: string; baseUrl: string; model: string }[] = [
+  { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'openrouter/auto' },
+  { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+  { label: 'Mistral', baseUrl: 'https://api.mistral.ai/v1', model: 'mistral-large-latest' },
+  {
+    label: 'Together',
+    baseUrl: 'https://api.together.xyz/v1',
+    model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+  },
+  {
+    label: 'Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    model: 'gemini-2.0-flash',
+  },
+]
+
 const BLANK: Draft = {
   id: '',
   label: '',
@@ -129,6 +148,31 @@ export function Settings() {
         )}
 
         <div className="space-y-2.5 px-4 pb-4 pt-4">
+          <label className="block">
+            <span className="label">Known endpoint</span>
+            <select
+              className={field}
+              value=""
+              onChange={(e) => {
+                const preset = PRESETS.find((p) => p.label === e.target.value)
+                if (!preset) return
+                setDraft({
+                  ...draft,
+                  label: preset.label,
+                  baseUrl: preset.baseUrl,
+                  model: preset.model,
+                })
+              }}
+            >
+              <option value="">choose one, then paste a key…</option>
+              {PRESETS.map((p) => (
+                <option key={p.label} value={p.label}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
               <span className="label">Label</span>
