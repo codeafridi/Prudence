@@ -17,6 +17,7 @@ import {
   removeNode,
   updateNode,
 } from '../model/ops'
+import { hasForecast, pOf } from '../model/ev'
 import type { Decision, Project, Provider, Verdict, Via } from '../model/types'
 
 /**
@@ -542,7 +543,14 @@ export const useStore = create<Store>((set, get) => {
         updateNode(get().project.root, id, (n) => ({
           ...n,
           reviewAt: undefined,
-          review: { verdict, note: trimmed || undefined, at: Date.now() },
+          review: {
+            verdict,
+            note: trimmed || undefined,
+            at: Date.now(),
+            // Freeze the forecast with the outcome. Without this, editing p later would
+            // silently re-score a call that has already been settled.
+            p: hasForecast(n) ? pOf(n) : undefined,
+          },
         })),
       )
     },

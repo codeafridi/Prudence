@@ -139,6 +139,15 @@ test('a pending review shows its due date', () => {
   assert.match(exportMarkdown(base), /_Review due 2027-02-01\._/)
 })
 
+test('the log scores the probabilities once outcomes exist', () => {
+  const base = fixture()
+  base.root.review = { verdict: 'worked', note: 'held', at: Date.UTC(2027, 4, 2), p: 0.8 }
+
+  const md = exportMarkdown(base)
+  assert.match(md, /\*\*Outcome:\*\* worked — 2027-05-02 · said 0\.80/)
+  assert.match(md, /Calibration: 1 call · said 80% · happened 100% · Brier 0\.04/)
+})
+
 test('json export strips api keys', () => {
   const json = exportJson(fixture())
   assert.doesNotMatch(json, /sk-secret/)

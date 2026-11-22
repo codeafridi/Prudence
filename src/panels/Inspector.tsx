@@ -446,6 +446,7 @@ function ReviewControls({ node }: { node: Decision }) {
       {node.review ? (
         <p className="mt-1 font-serif text-[11.5px] leading-snug text-ink-3">
           checked {new Date(node.review.at).toISOString().slice(0, 10)}
+          {node.review.p !== undefined ? ` · said ${node.review.p.toFixed(2)}` : ''}
           {node.review.note ? ` — ${node.review.note}` : ''}
         </p>
       ) : (

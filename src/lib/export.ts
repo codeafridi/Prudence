@@ -1,3 +1,4 @@
+import { calibration } from '../model/calibration.ts'
 import { isFresh } from '../model/hash.ts'
 import type { Decision, Project, Verdict } from '../model/types.ts'
 
@@ -16,14 +17,22 @@ export function exportMarkdown(project: Project): string {
     (n, node) => n + node.children.filter((c) => c.via?.kind === 'assumption').length,
     0,
   )
+  const cal = calibration(project.root)
 
   const out: string[] = [
     `# ${project.name} — decision log`,
     `Goal: ${project.goal}`,
     `${all.length} decisions · ${closed}/${decided.length} closed without children (${rate}%) · ` +
       `${rejected} rejected ${rejected === 1 ? 'branch' : 'branches'} · ${settled} assumption(s) settled`,
-    '',
   ]
+
+  if (cal.n > 0 && cal.brier !== null) {
+    out.push(
+      `Calibration: ${cal.n} ${cal.n === 1 ? 'call' : 'calls'} · said ${Math.round(cal.meanP * 100)}% · ` +
+        `happened ${Math.round(cal.hitRate * 100)}% · Brier ${cal.brier.toFixed(2)}`,
+    )
+  }
+  out.push('')
 
   writeNode(project, project.root, 1, out)
   return `${out.join('\n').trimEnd()}\n`
@@ -47,7 +56,8 @@ function writeNode(project: Project, node: Decision, depth: number, out: string[
     }
 
     if (node.review) {
-      out.push(`**Outcome:** ${node.review.verdict}${formatDate(node.review.at)}`)
+      const said = node.review.p !== undefined ? ` · said ${node.review.p.toFixed(2)}` : ''
+      out.push(`**Outcome:** ${node.review.verdict}${formatDate(node.review.at)}${said}`)
       if (node.review.note) out.push('', `> ${node.review.note}`)
       out.push('')
     } else if (node.reviewAt) {

@@ -98,6 +98,17 @@ try {
   assert(redone.includes('→ do'), 'redo restores the choice')
   ok('undo and redo work')
 
+  step('put a probability on the record')
+  await page.locator('input[type=range]').evaluate((el) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    setter.call(el, '0.7')
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await page.waitForTimeout(200)
+  assert((await page.textContent('body')).includes('0.70'), 'probability slider writes p')
+  ok('p set to 0.70')
+
   step('schedule and record a review')
   await page.getByRole('button', { name: '3m', exact: true }).click()
   await page.waitForTimeout(200)
@@ -123,7 +134,9 @@ try {
   await page.waitForTimeout(300)
   const review = await page.textContent('body')
   assert(review.includes('Nothing to flag') || review.includes('Export'), 'review panel renders')
-  ok('review panel renders')
+  assert(review.includes('Calibration') && review.includes('1 call'), 'calibration counts the call')
+  assert(review.includes('said 70%') && review.includes('happened 100%'), 'calibration scores p')
+  ok('review panel renders, calibration scores the call')
 
   // Regression: the provider selector used to call useStore twice behind a `??`, so saving the
   // first provider changed the hook count mid-render and React blanked the whole app.
@@ -170,6 +183,7 @@ try {
   assert(markdown.includes('decision log'), 'export has a title')
   assert(markdown.includes('postgres on one box'), 'export carries the rationale')
   assert(markdown.includes('**Outcome:** worked'), 'export carries the review')
+  assert(markdown.includes('Calibration: 1 call · said 70% · happened 100%'), 'export scores the call')
   ok(`${download.suggestedFilename()} (${markdown.length} bytes)`)
 
   step('reload persists')

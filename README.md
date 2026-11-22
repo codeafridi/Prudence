@@ -22,6 +22,8 @@ the call yourself and write down why.
   rate*, not node count or tokens.
 - **Advice you can argue with.** Every option comes with `p` (probability it works out) and impact
   if it works or fails. You can override `p`. The export records both numbers.
+- **A scoreboard for your judgement.** Record what happened and the Review panel scores the
+  forecasts: what you said, what happened, and a Brier number against a coin flip.
 - **Your keys, your browser.** Local-first: IndexedDB for projects, `localStorage` for API keys.
   No account, no server, no telemetry.
 

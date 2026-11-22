@@ -4,6 +4,7 @@ import { shareUrl } from '../lib/share'
 import { exportJson, exportMarkdown } from '../lib/export'
 import { lint, type Finding } from '../model/lint'
 import { useStore } from '../state/store'
+import { Calibration } from './Calibration'
 
 const LABEL: Record<Finding['rule'], string> = {
   'unowned-assumption': 'unowned assumption',
@@ -67,6 +68,10 @@ export function Review() {
             ))}
           </ul>
         )}
+
+        <div className="mt-5">
+          <Calibration project={project} />
+        </div>
       </div>
 
       <div className="space-y-2 border-t border-ink px-4 py-3 md:px-5">

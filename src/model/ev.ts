@@ -16,6 +16,12 @@ export function pOf(node: Decision): number {
   return consequenceFor(node, node.choice)?.p ?? 1
 }
 
+/** True when a probability actually exists on the record (human override or model estimate). */
+export function hasForecast(node: Decision): boolean {
+  if (node.state !== 'decided' || !node.choice) return false
+  return node.pOverride !== undefined || consequenceFor(node, node.choice) !== undefined
+}
+
 function consequenceFor(node: Decision, option: string): Consequence | undefined {
   return node.verdicts[0]?.perOption.find((c) => c.option === option)
 }

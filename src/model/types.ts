@@ -54,6 +54,9 @@ export type Review = {
   verdict: ReviewVerdict
   note?: string
   at: number
+  /** The forecast as it stood when the outcome was recorded. Locked: later p edits must not
+   *  rewrite the scored record. Absent on reviews written before this field existed. */
+  p?: number
 }
 
 export type Decision = {
