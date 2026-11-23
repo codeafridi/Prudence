@@ -86,43 +86,47 @@ export function App() {
 
   const actions = (
     <>
-      {(['canvas', 'outline'] as const).map((option) => (
-        <button
-          key={option}
-          onClick={() => setView(option)}
-          className={[cmd, view === option ? '!text-ink underline underline-offset-4' : ''].join(' ')}
-        >
-          {option}
+      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 md:gap-1">
+        {(['canvas', 'outline'] as const).map((option) => (
+          <button
+            key={option}
+            onClick={() => setView(option)}
+            className={[cmd, view === option ? '!text-ink underline underline-offset-4' : ''].join(' ')}
+          >
+            {option}
+          </button>
+        ))}
+        <span className="mx-1 hidden h-3 w-px shrink-0 bg-rule md:block" />
+        <button onClick={() => setPanel('review')} className={cmd}>
+          review
+          {findings.length > 0 && <span className="ml-1 text-stamp">{findings.length}</span>}
         </button>
-      ))}
-      <span className="mx-1 h-3 w-px shrink-0 bg-rule" />
-      <button onClick={() => setPanel('review')} className={cmd}>
-        review
-        {findings.length > 0 && <span className="ml-1 text-stamp">{findings.length}</span>}
-      </button>
-      <button onClick={() => setFinder(true)} className={cmd} title="Find a clause (Ctrl/Cmd+K)">
-        find
-      </button>
-      <button onClick={() => setExamples(true)} className={cmd} title="Load a starting record">
-        examples
-      </button>
-      <span className="mx-1 h-3 w-px shrink-0 bg-rule" />
-      <button onClick={undo} disabled={!canUndo} className={cmd} title="Undo (Ctrl/Cmd+Z)">
-        undo
-      </button>
-      <button onClick={redo} disabled={!canRedo} className={cmd} title="Redo (Ctrl/Cmd+Shift+Z)">
-        redo
-      </button>
-      <button onClick={tidy} className={cmd} title="Lay the record out again">
-        tidy
-      </button>
-      <button
-        onClick={() => void downloadRecord(project)}
-        className={cmd}
-        title="Save a standalone, printable copy of this record"
-      >
-        export
-      </button>
+        <button onClick={() => setFinder(true)} className={cmd} title="Find a clause (Ctrl/Cmd+K)">
+          find
+        </button>
+        <button onClick={() => setExamples(true)} className={cmd} title="Load a starting record">
+          examples
+        </button>
+      </span>
+      <span className="mx-1 hidden h-3 w-px shrink-0 bg-rule md:block" />
+      <span className="flex basis-full items-center gap-x-1.5 md:basis-auto md:gap-1">
+        <button onClick={undo} disabled={!canUndo} className={cmd} title="Undo (Ctrl/Cmd+Z)">
+          undo
+        </button>
+        <button onClick={redo} disabled={!canRedo} className={cmd} title="Redo (Ctrl/Cmd+Shift+Z)">
+          redo
+        </button>
+        <button onClick={tidy} className={cmd} title="Lay the record out again">
+          tidy
+        </button>
+        <button
+          onClick={() => void downloadRecord(project)}
+          className={cmd}
+          title="Save a standalone, printable copy of this record"
+        >
+          export
+        </button>
+      </span>
     </>
   )
 
@@ -167,7 +171,7 @@ export function App() {
           </div>
         </header>
 
-        <div className="no-scrollbar flex shrink-0 items-center gap-1 overflow-x-auto border-b border-rule px-4 py-1.5 md:px-9">
+        <div data-testid="toolbar" className="no-scrollbar flex shrink-0 flex-wrap items-center gap-x-1.5 gap-y-1 border-b border-rule px-4 py-1.5 md:flex-nowrap md:gap-1 md:overflow-x-auto md:px-9">
           {actions}
           <button
             onClick={openSettings}

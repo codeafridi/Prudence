@@ -282,6 +282,15 @@ try {
   )
   assert(noSideScroll, 'phone layout must not scroll sideways')
 
+  const toolbar = await phonePage.getByTestId('toolbar').evaluate((el) => ({
+    scrollWidth: el.scrollWidth,
+    clientWidth: el.clientWidth,
+  }))
+  assert(
+    toolbar.scrollWidth <= toolbar.clientWidth + 1,
+    `phone toolbar must wrap instead of hiding actions (${toolbar.scrollWidth} > ${toolbar.clientWidth})`,
+  )
+
   // Phones default to the outline: readable without pinching.
   const rows = phonePage.getByRole('button', { name: /Where does the data actually live/ })
   assert((await rows.count()) > 0, 'outline is the phone default')
