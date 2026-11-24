@@ -199,6 +199,8 @@ try {
   await page.waitForTimeout(250)
   await page.getByPlaceholder(/Jump to a decision/).fill('azure')
   await page.waitForTimeout(200)
+  const marks = await page.locator('mark').allTextContents()
+  assert(marks.some((text) => text.toLowerCase() === 'azure'), 'finder highlights the matching text')
   await page.keyboard.press('Enter')
   await page.waitForTimeout(600)
   const found = await page.locator('textarea').first().inputValue()

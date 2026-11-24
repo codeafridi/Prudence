@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { highlightSegments } from '../model/highlight'
 import { searchNodes } from '../model/search'
 import type { Decision } from '../model/types'
 import { useStore } from '../state/store'
@@ -84,11 +85,11 @@ export function Finder() {
               >
                 <StateMark state={node.state} />
                 <span className="min-w-0 flex-1 truncate font-serif text-[13px] text-ink">
-                  {node.question}
+                  <Highlight text={node.question} query={query} />
                 </span>
                 {node.choice && (
                   <span className="shrink-0 truncate font-mono text-[9px] uppercase tracking-[0.1em] text-stamp">
-                    {node.choice}
+                    <Highlight text={node.choice} query={query} />
                   </span>
                 )}
               </button>
@@ -97,6 +98,22 @@ export function Finder() {
         </ul>
       </div>
     </div>
+  )
+}
+
+function Highlight({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {highlightSegments(text, query).map((segment, i) =>
+        segment.match ? (
+          <mark key={i} className="bg-stamp/10 underline decoration-stamp decoration-2 underline-offset-2">
+            {segment.text}
+          </mark>
+        ) : (
+          segment.text
+        ),
+      )}
+    </>
   )
 }
 
